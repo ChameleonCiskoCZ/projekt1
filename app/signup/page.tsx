@@ -5,10 +5,13 @@ import firebase_app from "../../firebase";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function Register() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  //checks
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [registrationSuccessful, setRegistrationSuccessful] = useState(false);
@@ -16,6 +19,7 @@ export default function Register() {
 
   const auth = getAuth(firebase_app);
   const router = useRouter();
+  const db = getFirestore();
 
   const register = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -29,11 +33,20 @@ export default function Register() {
       setPasswordsMatch(true);
     }
 
-    // Create user
-
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      // Check if username is already taken
+      const docRef = doc(db, "users", username);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setErrorMessage("Username is already taken");
+        return;
+      }
+
+      (await createUserWithEmailAndPassword(auth, email, password)) &&
+        setDoc(doc(db, "users", username), { email });
       setRegistrationSuccessful(true);
+
       setTimeout(() => {
         router.push("/login");
       }, 2000);
@@ -76,13 +89,23 @@ export default function Register() {
         <div>
           <form onSubmit={register}>
             <input
+              required
               type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              required
+              type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
+              required
               type="password"
               placeholder="Password"
               value={password}
@@ -90,6 +113,7 @@ export default function Register() {
               className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
+              required
               type="password"
               placeholder="Confirm Password"
               value={confirmPassword}

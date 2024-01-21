@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,11 +19,41 @@ export default function Login() {
     event.preventDefault();
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      let userCredential;
+
+      // if email contains @, use email to login
+      if (email.includes("@")) {
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // else use username to login
+      } else {
+        const db = getFirestore(firebase_app);
+        const docRef = doc(db, "users", email);
+        const docSnap = await getDoc(docRef);
+
+        // if username exists, login
+        if (docSnap.exists()) {
+          userCredential = await signInWithEmailAndPassword(
+            auth,
+            docSnap.data().email,
+            password
+          );
+          // else throw error
+        } else {
+          setErrorMessage("Invalid username");
+          return;
+        }
+      }
       setSuccessMessage("Login successful");
       setTimeout(() => {
         router.push("/");
       }, 2000);
+
+      // handle errors
     } catch (error) {
       console.error(error);
 
@@ -51,13 +82,15 @@ export default function Login() {
         </div>
         <form onSubmit={login}>
           <input
+            required
             type="text"
-            placeholder="Email"
+            placeholder="Email or username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
+            required
             type="password"
             placeholder="Password"
             value={password}
