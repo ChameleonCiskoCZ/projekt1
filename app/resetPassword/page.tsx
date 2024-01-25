@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAuth, sendPasswordResetEmail } from "firebase/auth"; // Import the resetPassword function from your firebase file
+import { getAuth, sendPasswordResetEmail } from "firebase/auth"; 
 import firebase_app from "@/firebase";
 import Link from "next/link";
 import { FirebaseError } from "firebase/app";
@@ -17,7 +17,7 @@ export default function ResetPassword() {
   const resetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      await sendPasswordResetEmail(auth, email); // Call the resetPassword function with the email
+      await sendPasswordResetEmail(auth, email); 
       setSuccessMessage("Check your inbox for further instructions");
       setTimeout(() => {
         router.push("/login");
@@ -37,7 +37,7 @@ export default function ResetPassword() {
           <h2 className="text-2xl font-bold">Reset password</h2>
           <Link
             href="/login"
-            className="text-blue-500 hover:text-blue-700  rounded-md px-4 py-2"
+            className="text-blue-500 hover:text-blue-700  rounded-md px-2 py-2"
           >
             Login
           </Link>

@@ -75,7 +75,7 @@ export default function Login() {
           <h2 className="text-2xl font-bold">Login</h2>
           <Link
             href="/signup"
-            className="text-blue-500 hover:text-blue-700  rounded-md px-4 py-2"
+            className="text-blue-500 hover:text-blue-700  rounded-md px-2 py-2"
           >
             Register
           </Link>
@@ -100,7 +100,7 @@ export default function Login() {
           <div className="text-center mb-2">
             <Link
               href="/resetPassword"
-              className="w-full text-center text-blue-500 hover:text-blue-700"
+              className="w-full text-center text-blue-500 hover:text-blue-700 p-2"
             >
               Reset Password
             </Link>

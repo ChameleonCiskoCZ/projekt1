@@ -81,7 +81,7 @@ export default function Register() {
           <h2 className="text-2xl font-bold">Register</h2>
           <Link
             href="/login"
-            className="text-blue-500 hover:text-blue-700 rounded-md px-4 py-2"
+            className="text-blue-500 hover:text-blue-700 rounded-md px-2 py-2"
           >
             Login
           </Link>
