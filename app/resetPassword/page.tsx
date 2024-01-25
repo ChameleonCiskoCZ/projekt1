@@ -14,8 +14,8 @@ export default function ResetPassword() {
   const router = useRouter();
   const auth = getAuth(firebase_app);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const resetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
       await sendPasswordResetEmail(auth, email); // Call the resetPassword function with the email
       setSuccessMessage("Check your inbox for further instructions");
@@ -42,7 +42,7 @@ export default function ResetPassword() {
             Login
           </Link>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={resetPassword}>
           <input
             required
             type="email"
