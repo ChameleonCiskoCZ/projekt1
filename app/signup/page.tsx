@@ -76,12 +76,12 @@ export default function Register() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-sm p-6 m-4 bg-white rounded shadow-md">
+      <div className="w-full max-w-sm p-6 m-4 bg-white rounded-2xl shadow-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Create New Account</h2>
+          <h2 className="text-2xl font-bold">Register</h2>
           <Link
             href="/login"
-            className="bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-700"
+            className="text-blue-500 hover:text-blue-700 rounded-md px-4 py-2"
           >
             Login
           </Link>
@@ -94,7 +94,7 @@ export default function Register() {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 mb-1 border border-gray-300 rounded-t-xl rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               required
@@ -102,7 +102,7 @@ export default function Register() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 mb-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               required
@@ -110,7 +110,7 @@ export default function Register() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 mb-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               required
@@ -118,23 +118,50 @@ export default function Register() {
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 mb-4 border border-gray-300 rounded-b-xl rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
-              className="w-full p-2 bg-blue-500 text-white rounded-md hover:bg-blue-700"
+              className="w-full p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-700"
             >
               Register
             </button>
-            {!passwordsMatch && (
-              <p className="text-red-500 mt-2">Passwords do not match</p>
-            )}
-            {registrationSuccessful && (
-              <p className="text-green-500 mt-2">Registration successful</p>
-            )}
-            {errorMessage && (
-              <p className="text-red-500 mt-2">{errorMessage}</p>
-            )}
+            <div className=" text-center">
+              {!passwordsMatch && (
+                <>
+                  <div className="mt-4">
+                    <span className="inline-flex items-center justify-center text-5xl bg-red-200 rounded-full text-red-500 w-16 h-16">
+                      ✖
+                    </span>
+                  </div>
+                  <div className="text-red-500 mt-2">
+                    Passwords do not match
+                  </div>
+                </>
+              )}
+              {registrationSuccessful && (
+                <>
+                  <div className="mt-4">
+                    <span className="inline-flex items-center justify-center text-5xl bg-green-200 rounded-full text-green-500 w-16 h-16">
+                      ✔
+                    </span>
+                  </div>
+                  <div className="text-green-500 mt-2">
+                    Registration successful
+                  </div>
+                </>
+              )}
+              {!registrationSuccessful && errorMessage && (
+                <>
+                  <div className="mt-4">
+                    <span className="inline-flex items-center justify-center text-5xl bg-red-200 rounded-full text-red-500 w-16 h-16">
+                      ✖
+                    </span>
+                  </div>
+                  <div className="text-red-500 mt-2">{errorMessage}</div>
+                </>
+              )}
+            </div>
           </form>
         </div>
       </div>
