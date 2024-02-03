@@ -50,7 +50,7 @@ export default function Login() {
       }
       setSuccessMessage("Login successful");
       setTimeout(() => {
-        router.push("/");
+        router.push("/mainApp");
       }, 2000);
 
       // handle errors
