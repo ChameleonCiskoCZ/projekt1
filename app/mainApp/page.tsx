@@ -2,13 +2,9 @@
 import React, { useState, useEffect } from "react";
 import {
   getFirestore,
-  addDoc,
   collection,
   doc,
   getDocs,
-  onSnapshot,
-  deleteDoc,
-  updateDoc,
   writeBatch,
 } from "firebase/firestore";
 import firebase_app from "@/firebase";
@@ -20,10 +16,9 @@ type Tile = {
   position: number;
 };
 
-export default function mainApp() {
+export default function MainApp() {
   const [name, setName] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([]);
-  const [originalTiles, setOriginalTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
   const userRef = doc(db, "users", "test"); // replace 'test' with the actual username
   const tilesCollectionRef = collection(userRef, "tiles");
@@ -38,11 +33,10 @@ export default function mainApp() {
         (doc) => ({ id: doc.id, ...doc.data() } as Tile)
       );
       setTiles(tiles);
-      setOriginalTiles(tiles);
     };
 
     fetchTiles();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddTile = () => {
     const newPosition = tiles.length;
