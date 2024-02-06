@@ -11,10 +11,17 @@ import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ReactDOM from "react-dom";
 
+type Card = {
+  id: string;
+  name: string;
+  position: number;
+};
+
 type Tile = {
   id: string;
   name: string;
   position: number;
+  cards: Card[];
 };
 
 export default function MainApp() {
@@ -31,8 +38,16 @@ export default function MainApp() {
     const fetchTiles = async () => {
       const tileCollection = collection(db, "users", "test", "tiles");
       const tileSnapshot = await getDocs(tileCollection);
-      const tiles = tileSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Tile)
+      const tiles = await Promise.all(
+        tileSnapshot.docs.map(async (doc) => {
+          const tileData = doc.data();
+          const cardCollection = collection(tileCollection, doc.id, "cards");
+          const cardSnapshot = await getDocs(cardCollection);
+          const cards = cardSnapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() } as Card)
+          );
+          return { id: doc.id, ...tileData, cards } as Tile;
+        })
       );
       setTiles(tiles);
     };
@@ -46,6 +61,7 @@ export default function MainApp() {
       name,
       position: newPosition,
       id: `temp-${Math.random().toString(36).substr(2, 9)}`,
+      cards: [],
     };
     setName("");
     // Add the new tile locally
@@ -53,13 +69,87 @@ export default function MainApp() {
     setIsClicked(false);
   };
 
+  // Update the handleRemoveTile function
   const handleRemoveTile = (id: string) => {
-    // Remove the tile locally
-    const newTiles = tiles.filter((tile) => tile.id !== id);
-    setTiles(newTiles);
-
+    setTiles(tiles.filter((tile) => tile.id !== id));
     setRemovedTileIds((prev) => new Set(prev).add(id));
   };
+
+  const [expandedTileId, setExpandedTileId] = useState<string | null>(null);
+  const [newCardName, setNewCardName] = useState("");
+  const addCardRef = useRef(null);
+
+  const handleAddCardClick = (tileId: string) => {
+    setExpandedTileId(tileId);
+  };
+
+  // Add a new card to a tile
+  const handleAddCard = (tileId: string, event: React.MouseEvent) => {
+    // Find the tile to which the card will be added
+    const tile = tiles.find((tile) => tile.id === tileId);
+    // Determine the position for the new card
+    const newPosition = tile ? tile.cards.length : 0;
+
+    if (newCardName.trim() !== "") {
+      // Create a new card
+      const newCard = {
+        id: `temp-${Math.random().toString(36).substr(2, 9)}`,
+        name: newCardName,
+        position: newPosition,
+      };
+
+      // Add the card to the tile
+      setTiles((prevTiles) =>
+        prevTiles.map((tile) =>
+          tile.id === tileId
+            ? { ...tile, cards: [...tile.cards, newCard] }
+            : tile
+        )
+      );
+
+      // Reset the state
+      setNewCardName("");
+      setExpandedTileId(null);
+    }
+  };
+  const [removedCardIds, setRemovedCardIds] = useState<{
+    [tileId: string]: string[];
+  }>({});
+  const handleRemoveCard = (tileId: string, cardId: string) => {
+    setTiles((prevTiles) =>
+      prevTiles.map((tile) =>
+        tile.id === tileId
+          ? { ...tile, cards: tile.cards.filter((card) => card.id !== cardId) }
+          : tile
+      )
+    );
+    setRemovedCardIds((prevRemovedCardIds) => {
+      const newRemovedCardIds = { ...prevRemovedCardIds };
+      if (newRemovedCardIds[tileId]) {
+        newRemovedCardIds[tileId].push(cardId);
+      } else {
+        newRemovedCardIds[tileId] = [cardId];
+      }
+      return newRemovedCardIds;
+    });
+  };
+
+  // Clicking outside to close the form
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        addCardRef.current &&
+        !addCardRef.current.contains(event.target as Node)
+      ) {
+        setExpandedTileId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [addCardRef]);
 
   // Add a new state variable for the id of the tile that is being edited
   const [editingTileId, setEditingTileId] = useState<string | null>(null);
@@ -81,43 +171,107 @@ export default function MainApp() {
     setNewName("");
   };
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const handleDragEnd = (result) => {
+    const { source, destination, draggableId, type } = result;
 
-    // Reorder the tiles locally
-    const items = Array.from(tiles);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    // Ignore drops outside of a droppable area
+    if (!destination) {
+      return;
+    }
 
-    // Update the position property of each tile
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      position: index,
-    }));
+    if (type === "tile") {
+      // Handle tile reordering
+      const newTiles = Array.from(tiles);
+      const [removed] = newTiles.splice(source.index, 1);
+      newTiles.splice(destination.index, 0, removed);
 
-    setTiles(updatedItems);
+      // Update the position of each tile
+      newTiles.forEach((tile, index) => {
+        tile.position = index;
+      });
+
+      setTiles(newTiles);
+    } else {
+      // Handle card reordering
+      const startTileId = source.droppableId.split("-")[1];
+      const endTileId = destination.droppableId.split("-")[1];
+
+      const startTile = tiles.find((tile) => tile.id === startTileId);
+      const endTile = tiles.find((tile) => tile.id === endTileId);
+
+      // Moving within the same tile
+      if (startTileId === endTileId) {
+        const newCards = Array.from(startTile.cards);
+        const [removed] = newCards.splice(source.index, 1);
+        newCards.splice(destination.index, 0, removed);
+
+        // Update the position of each card
+        newCards.forEach((card, index) => {
+          card.position = index;
+        });
+
+        startTile.cards = newCards;
+      } else {
+        // Moving to a different tile
+        const startCards = Array.from(startTile.cards);
+        const [removed] = startCards.splice(source.index, 1);
+        const endCards = Array.from(endTile.cards);
+        endCards.splice(destination.index, 0, removed);
+
+
+        // Update the position of each card in the start and end tiles
+        startCards.forEach((card, index) => {
+          card.position = index;
+        });
+        endCards.forEach((card, index) => {
+          card.position = index;
+        });
+
+        startTile.cards = startCards;
+        endTile.cards = endCards;
+      }
+
+      setTiles([...tiles]);
+    }
   };
 
   const handleSave = async () => {
-    // Update the tiles in Firestore
     const batch = writeBatch(db);
     const tileCollection = collection(db, "users", "test", "tiles");
 
     for (const tile of tiles) {
+      let tileRef;
       if (tile.id.startsWith("temp-")) {
-        // The tile is new, so add it to Firestore
-        const tileDocRef = doc(tileCollection);
-        batch.set(tileDocRef, { name: tile.name, position: tile.position });
-        // Update the ID of the tile in the local state
-        tile.id = tileDocRef.id;
+        tileRef = doc(tileCollection);
+        batch.set(tileRef, { name: tile.name, position: tile.position });
+        tile.id = tileRef.id;
       } else {
-        // The tile already exists, so update it in Firestore
-        const tileRef = doc(tileCollection, tile.id);
-        batch.update(tileRef, tile);
+        tileRef = doc(tileCollection, tile.id);
+        batch.update(tileRef, { name: tile.name, position: tile.position });
+      }
+
+      const cardCollection = collection(tileRef, "cards");
+      for (const card of tile.cards) {
+        if (card.id.startsWith("temp-")) {
+          const cardDocRef = doc(cardCollection);
+          card.id = cardDocRef.id;
+          batch.set(cardDocRef, card);
+        } else {
+          const cardRef = doc(cardCollection, card.id);
+          batch.update(cardRef, card);
+        }
       }
     }
 
-    // Handle removed tiles
+    for (const tileId in removedCardIds) {
+      const tileRef = doc(tileCollection, tileId);
+      const cardCollection = collection(tileRef, "cards");
+      for (const cardId of removedCardIds[tileId]) {
+        const cardRef = doc(cardCollection, cardId);
+        batch.delete(cardRef);
+      }
+    }
+
     removedTileIds.forEach((id) => {
       const tileRef = doc(db, "users", "test", "tiles", id as string);
       batch.delete(tileRef);
@@ -125,6 +279,7 @@ export default function MainApp() {
 
     await batch.commit();
     setRemovedTileIds(new Set());
+    setRemovedCardIds({});
   };
 
   // Add a new state variable for the id of the tile that has its menu open
@@ -204,10 +359,10 @@ export default function MainApp() {
   return (
     <div className="min-h-screen bg-gray-100">
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="tiles" direction="horizontal">
+        <Droppable droppableId="all-tiles" direction="horizontal" type="tile">
           {(provided) => (
             <div
-              className="grid grid-flow-col auto-cols-max"
+              className="flex flex-wrap"
               {...provided.droppableProps}
               ref={provided.innerRef}
             >
@@ -221,7 +376,7 @@ export default function MainApp() {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="p-2 bg-white rounded-2xl shadow m-2 w-64 relative flex flex-col"
+                          className="p-2 bg-white rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
                         >
                           {/* Add the ref to the button */}
                           <div className="grid grid-cols-12 gap-2 items-start">
@@ -263,6 +418,81 @@ export default function MainApp() {
                               <span className="w-4 h-0.5 bg-black block rounded-full"></span>
                             </button>
                           </div>
+                          <div>
+                            <Droppable
+                              droppableId={`tile-${tile.id}`}
+                              type="card"
+                            >
+                              {(provided) => (
+                                <div
+                                  {...provided.droppableProps}
+                                  ref={provided.innerRef}
+                                >
+                                  {tile.cards
+                                    .sort((a, b) => a.position - b.position) // Sort the cards by position
+                                    .map((card, cardIndex) => (
+                                      <Draggable
+                                        key={card.id}
+                                        draggableId={card.id}
+                                        index={cardIndex}
+                                      >
+                                        {(provided) => (
+                                          <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            className="shadow bg-gray-50 bg-opacity-40 p-2 rounded-xl mt-2 relative"
+                                          >
+                                            <h3 className="text-lg font-semibold">
+                                              {card.name}
+                                            </h3>
+                                            <button
+                                              onClick={() =>
+                                                handleRemoveCard(
+                                                  tile.id,
+                                                  card.id
+                                                )
+                                              }
+                                              className="absolute top-0 right-0 mt-2 mr-2 rounded-xl p-1 hover:bg-red-600"
+                                            >
+                                              X
+                                            </button>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                  {provided.placeholder}
+                                </div>
+                              )}
+                            </Droppable>
+                            {expandedTileId === tile.id ? (
+                              <div ref={addCardRef}>
+                                <input
+                                  type="text"
+                                  value={newCardName}
+                                  onChange={(e) =>
+                                    setNewCardName(e.target.value)
+                                  }
+                                  className="mt-2 border rounded-xl p-2"
+                                />
+                                <button
+                                  onClick={(event) =>
+                                    handleAddCard(tile.id, event)
+                                  }
+                                  className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleAddCardClick(tile.id)}
+                                className="w-full mt-2 rounded-xl p-2 shadow bg-gray-50 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
+                              >
+                                <span className="text-2xl">+</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {/* Only show the menu if the openTileId matches the id of this tile */}
                         {openTileId === tile.id &&
@@ -273,7 +503,7 @@ export default function MainApp() {
                                 position: "fixed",
                                 ...menuPosition,
                               }}
-                              className="mt-10 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                              className="mt-10 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
                             >
                               <div
                                 className="py-1"
@@ -283,7 +513,7 @@ export default function MainApp() {
                               >
                                 <button
                                   onClick={() => handleRemoveTile(tile.id)}
-                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                  className="block w-full rounded-xl text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                   role="menuitem"
                                 >
                                   Remove
@@ -309,7 +539,7 @@ export default function MainApp() {
                   event.stopPropagation();
                   setIsClicked(true);
                 }}
-                className={`p-4 rounded-2xl shadow m-2 w-64 relative ${
+                className={`self-start p-4 rounded-2xl shadow m-2 w-64 relative ${
                   isClicked
                     ? "bg-white"
                     : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70"
