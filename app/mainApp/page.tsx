@@ -77,7 +77,7 @@ export default function MainApp() {
 
   const [expandedTileId, setExpandedTileId] = useState<string | null>(null);
   const [newCardName, setNewCardName] = useState("");
-  const addCardRef = useRef(null);
+  const addCardRef = useRef<HTMLDivElement>(null);
 
   const handleAddCardClick = (tileId: string) => {
     setExpandedTileId(tileId);
@@ -171,7 +171,7 @@ export default function MainApp() {
     setNewName("");
   };
 
-  const handleDragEnd = (result) => {
+  const handleDragEnd = (result:any) => {
     const { source, destination, draggableId, type } = result;
 
     // Ignore drops outside of a droppable area
@@ -262,6 +262,7 @@ export default function MainApp() {
         }
       }
     }
+    
 
     for (const tileId in removedCardIds) {
       const tileRef = doc(tileCollection, tileId);
