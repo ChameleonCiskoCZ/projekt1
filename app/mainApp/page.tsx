@@ -199,6 +199,11 @@ export default function MainApp() {
       const startTile = tiles.find((tile) => tile.id === startTileId);
       const endTile = tiles.find((tile) => tile.id === endTileId);
 
+      // Check if startTile and endTile are not undefined
+      if (!startTile || !endTile) {
+        throw new Error("Tile not found");
+      }
+
       // Moving within the same tile
       if (startTileId === endTileId) {
         const newCards = Array.from(startTile.cards);
@@ -217,7 +222,6 @@ export default function MainApp() {
         const [removed] = startCards.splice(source.index, 1);
         const endCards = Array.from(endTile.cards);
         endCards.splice(destination.index, 0, removed);
-
 
         // Update the position of each card in the start and end tiles
         startCards.forEach((card, index) => {
