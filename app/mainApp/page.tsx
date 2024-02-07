@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   writeBatch,
+  getDoc,
 } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -262,11 +263,15 @@ export default function MainApp() {
           batch.set(cardDocRef, card);
         } else {
           const cardRef = doc(cardCollection, card.id);
-          batch.update(cardRef, card);
+          const cardDoc = await getDoc(cardRef);
+          if (cardDoc.exists()) {
+            batch.update(cardRef, card);
+          } else {
+            batch.set(cardRef, card);
+          }
         }
       }
     }
-    
 
     for (const tileId in removedCardIds) {
       const tileRef = doc(tileCollection, tileId);
@@ -344,7 +349,7 @@ export default function MainApp() {
   useEffect(() => {
     const resizeTextArea = () => {
       if (textareaRef.current) {
-        textareaRef.current.style.height = "32px";
+        textareaRef.current.style.height = "28px";
         textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
       }
     };
@@ -367,7 +372,7 @@ export default function MainApp() {
         <Droppable droppableId="all-tiles" direction="horizontal" type="tile">
           {(provided) => (
             <div
-              className="flex flex-wrap"
+              className="flex"
               {...provided.droppableProps}
               ref={provided.innerRef}
             >
@@ -381,7 +386,7 @@ export default function MainApp() {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="p-2 bg-white rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
+                          className="p-2 bg-white flex-shrink-0 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
                         >
                           {/* Add the ref to the button */}
                           <div className="grid grid-cols-12 gap-2 items-start">
@@ -401,13 +406,13 @@ export default function MainApp() {
                                 />
                               ) : (
                                 <div
-                                  className="text-xl p-0.5 pl-2 mr-2 font-bold break-words cursor-pointer overflow-auto whitespace-normal min-w-0"
+                                  className="text-xl p-0.5 pl-2 mr-2 font-bold break-words cursor-pointer"
                                   onClick={() => {
                                     setEditingTileId(tile.id);
                                     setNewName(tile.name || "");
                                   }}
                                 >
-                                  <h2>{tile.name || "Click to edit"}</h2>
+                                  <h2>{tile.name || "edit"}</h2>
                                 </div>
                               )}
                             </div>
@@ -446,7 +451,7 @@ export default function MainApp() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="shadow bg-gray-50 bg-opacity-40 p-2 rounded-xl mt-2 relative"
+                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
                                           >
                                             <h3 className="text-lg font-semibold">
                                               {card.name}
@@ -492,7 +497,7 @@ export default function MainApp() {
                             ) : (
                               <button
                                 onClick={() => handleAddCardClick(tile.id)}
-                                className="w-full mt-2 rounded-xl p-2 shadow bg-gray-50 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
+                                className="w-full mt-2 rounded-xl p-2 shadow bg-gray-100 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
                               >
                                 <span className="text-2xl">+</span>
                               </button>
@@ -544,7 +549,7 @@ export default function MainApp() {
                   event.stopPropagation();
                   setIsClicked(true);
                 }}
-                className={`self-start p-4 rounded-2xl shadow m-2 w-64 relative ${
+                className={`self-start p-4 rounded-2xl shadow m-2 w-64 flex-shrink-0 relative ${
                   isClicked
                     ? "bg-white"
                     : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70"
