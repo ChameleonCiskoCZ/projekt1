@@ -12,6 +12,7 @@ import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ReactDOM from "react-dom";
 
+// Define the types for the cards and tiles
 type Card = {
   id: string;
   name: string;
@@ -33,6 +34,7 @@ export default function MainApp() {
   const tilesCollectionRef = collection(userRef, "tiles");
   const [removedTileIds, setRemovedTileIds] = useState(new Set());
   const [isClicked, setIsClicked] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function MainApp() {
     fetchTiles();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // handle adding tiles
   const handleAddTile = () => {
     const newPosition = tiles.length;
     const newTile = {
@@ -70,7 +73,7 @@ export default function MainApp() {
     setIsClicked(false);
   };
 
-  // Update the handleRemoveTile function
+  // handle removing tiles
   const handleRemoveTile = (id: string) => {
     setTiles(tiles.filter((tile) => tile.id !== id));
     setRemovedTileIds((prev) => new Set(prev).add(id));
@@ -85,7 +88,7 @@ export default function MainApp() {
   };
 
   // Add a new card to a tile
-  const handleAddCard = (tileId: string, event: React.MouseEvent) => {
+  const handleAddCard = (tileId: string) => {
     // Find the tile to which the card will be added
     const tile = tiles.find((tile) => tile.id === tileId);
     // Determine the position for the new card
@@ -135,7 +138,7 @@ export default function MainApp() {
     });
   };
 
-  // Clicking outside to close the form
+  // handle clicking outside addcard button
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -158,8 +161,7 @@ export default function MainApp() {
   // Add a new state variable for the new name of the tile that is being edited
   const [newName, setNewName] = useState("");
 
-  // ...existing code...
-
+  // Update the name of the tile
   const handleNameChange = (id: string) => {
     // Update the name of the tile in the state
     const newTiles = tiles.map((tile) =>
@@ -172,11 +174,17 @@ export default function MainApp() {
     setNewName("");
   };
 
-  const handleDragEnd = (result:any) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [movedCards, setMovedCards] = useState<{ [key: string]: string }>({});
+
+  // Handle the drag and drop
+  const handleDragEnd = (result: any) => {
+    setIsDragging(true);
     const { source, destination, draggableId, type } = result;
 
     // Ignore drops outside of a droppable area
     if (!destination) {
+      setIsDragging(false);
       return;
     }
 
@@ -234,16 +242,24 @@ export default function MainApp() {
 
         startTile.cards = startCards;
         endTile.cards = endCards;
+
+        setMovedCards((prevMovedCards) => ({
+          ...prevMovedCards,
+          [removed.id]: startTileId,
+        }));
       }
 
       setTiles([...tiles]);
     }
+    setIsDragging(false);
   };
 
   const handleSave = async () => {
+    setIsSaving(true);
     const batch = writeBatch(db);
     const tileCollection = collection(db, "users", "test", "tiles");
 
+    // Save new and updated tiles and cards
     for (const tile of tiles) {
       let tileRef;
       if (tile.id.startsWith("temp-")) {
@@ -273,6 +289,16 @@ export default function MainApp() {
       }
     }
 
+    // Delete moved cards from their original tiles
+    for (const cardId in movedCards) {
+      const originalTileId = movedCards[cardId];
+      const tileRef = doc(tileCollection, originalTileId);
+      const cardCollection = collection(tileRef, "cards");
+      const cardRef = doc(cardCollection, cardId);
+      batch.delete(cardRef);
+    }
+
+    // Delete removed cards
     for (const tileId in removedCardIds) {
       const tileRef = doc(tileCollection, tileId);
       const cardCollection = collection(tileRef, "cards");
@@ -290,6 +316,8 @@ export default function MainApp() {
     await batch.commit();
     setRemovedTileIds(new Set());
     setRemovedCardIds({});
+    setIsSaving(false);
+    setHasSavedOnce(true);
   };
 
   // Add a new state variable for the id of the tile that has its menu open
@@ -299,7 +327,7 @@ export default function MainApp() {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Add an effect to add the event listener when the component mounts
+  //listener when the component mounts
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -320,6 +348,7 @@ export default function MainApp() {
 
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
+  //handle the button click
   const handleButtonClick = (id: string, event: React.MouseEvent) => {
     const rect = (event.target as Element).getBoundingClientRect();
     setOpenTileId(id);
@@ -331,6 +360,7 @@ export default function MainApp() {
 
   const tileRef = useRef<HTMLDivElement>(null);
 
+  // Add an effect to close the menu when clicking outside tile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
@@ -346,6 +376,7 @@ export default function MainApp() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Add an effect to resize the textarea
   useEffect(() => {
     const resizeTextArea = () => {
       if (textareaRef.current) {
@@ -366,8 +397,35 @@ export default function MainApp() {
     }
   }, [newName]);
 
+  const [showSaved, setShowSaved] = useState(false);
+  const [hasSavedOnce, setHasSavedOnce] = useState(false);
+
+  //timeout to show saved message
+  useEffect(() => {
+    let timeoutId: any;
+    if (!isSaving && hasSavedOnce) {
+      setShowSaved(true);
+      timeoutId = setTimeout(() => setShowSaved(false), 3000); // 3000ms = 3s
+    }
+    return () => clearTimeout(timeoutId);
+  }, [isSaving, hasSavedOnce]);
+
+  
   return (
     <div className="min-h-screen bg-gray-100">
+      <div>
+        {/* ...rest of your component... */}
+        {isSaving && (
+          <div className="fixed bottom-4 right-4 w-40 z-50 px-20 py-4 bg-gray-300 rounded-2xl flex items-center justify-center">
+            Saving
+          </div>
+        )}
+        {!isSaving && showSaved && (
+          <div className="fixed bottom-4 right-4 w-40 z-50 px-20 py-4 bg-green-300 rounded-2xl flex items-center justify-center">
+            Saved!
+          </div>
+        )}
+      </div>
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="all-tiles" direction="horizontal" type="tile">
           {(provided) => (
@@ -421,7 +479,7 @@ export default function MainApp() {
                               onClick={(event) =>
                                 handleButtonClick(tile.id, event)
                               }
-                              className="col-span-2 text-xl p-2.5 rounded-xl hover:bg-gray-100 justify-self-end box-content hover:outline-none hover:ring-2 hover:ring-blue-500"
+                              className="col-span-2 text-xl p-2.5 rounded-xl hover:bg-gray-100 justify-self-end box-content"
                             >
                               <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
                               <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
@@ -451,7 +509,7 @@ export default function MainApp() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
+                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative flex items-center justify-between"
                                           >
                                             <h3 className="text-lg font-semibold">
                                               {card.name}
@@ -463,9 +521,9 @@ export default function MainApp() {
                                                   card.id
                                                 )
                                               }
-                                              className="absolute top-0 right-0 mt-2 mr-2 rounded-xl p-1 hover:bg-red-600"
+                                              className="p-2 w-6 h-6 rounded-lg hover:bg-red-100 flex items-center justify-center"
                                             >
-                                              X
+                                              ✖
                                             </button>
                                           </div>
                                         )}
@@ -483,12 +541,16 @@ export default function MainApp() {
                                   onChange={(e) =>
                                     setNewCardName(e.target.value)
                                   }
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                      handleAddCard(tile.id);
+                                    }
+                                  }}
+                                  autoFocus
                                   className="mt-2 border rounded-xl p-2"
                                 />
                                 <button
-                                  onClick={(event) =>
-                                    handleAddCard(tile.id, event)
-                                  }
+                                  onClick={() => handleAddCard(tile.id)}
                                   className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
                                 >
                                   Save
@@ -552,7 +614,7 @@ export default function MainApp() {
                 className={`self-start p-4 rounded-2xl shadow m-2 w-64 flex-shrink-0 relative ${
                   isClicked
                     ? "bg-white"
-                    : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70"
+                    : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70 cursor-pointer"
                 } ${isClicked ? "h-auto" : "min-h-20"} ${
                   isClicked ? "" : "flex items-center justify-center"
                 }`}
@@ -564,6 +626,13 @@ export default function MainApp() {
                       placeholder="Enter name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault(); // Prevent form submission
+                          handleAddTile();
+                        }
+                      }}
+                      autoFocus
                       className="mb-2 px-2 py-1 border-2 border-gray-200 rounded-xl w-full"
                     />
                     <button
@@ -582,12 +651,17 @@ export default function MainApp() {
           )}
         </Droppable>
       </DragDropContext>
-      <button
-        onClick={handleSave}
-        className="p-2 mt-4 bg-green-500 text-white rounded w-full"
-      >
-        Save
-      </button>
+      <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
+        <button
+          disabled={isDragging}
+          onClick={handleSave}
+          className={`p-4 w-40 mt-4 text-white rounded-2xl bg-green-400 ${
+            isDragging ? "cursor-not-allowed opacity-50" : ""
+          }`}
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 }

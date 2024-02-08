@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import firebase_app from "../../firebase";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
@@ -43,13 +43,25 @@ export default function Register() {
         return;
       }
 
-      (await createUserWithEmailAndPassword(auth, email, password)) &&
-        setDoc(doc(db, "users", username), { email });
-      setRegistrationSuccessful(true);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      if (userCredential) {
+        // Set displayName to username
+        await updateProfile(userCredential.user, { displayName: username });
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+        await setDoc(doc(db, "users", username), {
+          email,
+          uid: userCredential.user.uid,
+        });
+        setRegistrationSuccessful(true);
+
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      }
     } catch (error) {
       console.error(error);
 
