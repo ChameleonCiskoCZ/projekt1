@@ -12,6 +12,7 @@ import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ReactDOM from "react-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 // Define the types for the cards and tiles
 type Card = {
@@ -35,7 +36,7 @@ export default function MainApp() {
   const [removedTileIds, setRemovedTileIds] = useState(new Set());
   const [isClicked, setIsClicked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
+  const router = useRouter();
   const auth = getAuth(firebase_app);
   const [username, setUsername] = useState<string | null>(null);
 
@@ -46,6 +47,7 @@ export default function MainApp() {
         setUsername(user.displayName);
       } else {
         setUsername(null);
+        router.push("/login");
       }
     });
 
