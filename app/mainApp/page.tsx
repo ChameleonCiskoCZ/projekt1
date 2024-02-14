@@ -11,6 +11,7 @@ import {
 import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ReactDOM from "react-dom";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // Define the types for the cards and tiles
 type Card = {
@@ -30,33 +31,52 @@ export default function MainApp() {
   const [name, setName] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
-  const userRef = doc(db, "users", "test"); // replace 'test' with the actual username
-  const tilesCollectionRef = collection(userRef, "tiles");
   const [removedTileIds, setRemovedTileIds] = useState(new Set());
   const [isClicked, setIsClicked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const auth = getAuth(firebase_app);
+  const [username, setUsername] = useState<string | null>(null);
+
+  // Set up a subscription to the auth object
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUsername(user.displayName);
+      } else {
+        setUsername(null);
+      }
+    });
+
+    // Clean up the subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
     const fetchTiles = async () => {
-      const tileCollection = collection(db, "users", "test", "tiles");
-      const tileSnapshot = await getDocs(tileCollection);
-      const tiles = await Promise.all(
-        tileSnapshot.docs.map(async (doc) => {
-          const tileData = doc.data();
-          const cardCollection = collection(tileCollection, doc.id, "cards");
-          const cardSnapshot = await getDocs(cardCollection);
-          const cards = cardSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as Card)
-          );
-          return { id: doc.id, ...tileData, cards } as Tile;
-        })
-      );
-      setTiles(tiles);
+      if (username) {
+        // Fetch the user's document from the users collection
+        const tileCollection = collection(db, "users", username, "tiles");
+
+        const tileSnapshot = await getDocs(tileCollection);
+        const tiles = await Promise.all(
+          tileSnapshot.docs.map(async (doc) => {
+            const tileData = doc.data();
+            const cardCollection = collection(tileCollection, doc.id, "cards");
+            const cardSnapshot = await getDocs(cardCollection);
+            const cards = cardSnapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as Card)
+            );
+            return { id: doc.id, ...tileData, cards } as Tile;
+          })
+        );
+        setTiles(tiles);
+      }
     };
 
     fetchTiles();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // handle adding tiles
   const handleAddTile = () => {
@@ -257,67 +277,69 @@ export default function MainApp() {
   const handleSave = async () => {
     setIsSaving(true);
     const batch = writeBatch(db);
-    const tileCollection = collection(db, "users", "test", "tiles");
+    if (username) {
+      const tileCollection = collection(db, "users", username, "tiles");
 
-    // Save new and updated tiles and cards
-    for (const tile of tiles) {
-      let tileRef;
-      if (tile.id.startsWith("temp-")) {
-        tileRef = doc(tileCollection);
-        batch.set(tileRef, { name: tile.name, position: tile.position });
-        tile.id = tileRef.id;
-      } else {
-        tileRef = doc(tileCollection, tile.id);
-        batch.update(tileRef, { name: tile.name, position: tile.position });
-      }
-
-      const cardCollection = collection(tileRef, "cards");
-      for (const card of tile.cards) {
-        if (card.id.startsWith("temp-")) {
-          const cardDocRef = doc(cardCollection);
-          card.id = cardDocRef.id;
-          batch.set(cardDocRef, card);
+      // Save new and updated tiles and cards
+      for (const tile of tiles) {
+        let tileRef;
+        if (tile.id.startsWith("temp-")) {
+          tileRef = doc(tileCollection);
+          batch.set(tileRef, { name: tile.name, position: tile.position });
+          tile.id = tileRef.id;
         } else {
-          const cardRef = doc(cardCollection, card.id);
-          const cardDoc = await getDoc(cardRef);
-          if (cardDoc.exists()) {
-            batch.update(cardRef, card);
+          tileRef = doc(tileCollection, tile.id);
+          batch.update(tileRef, { name: tile.name, position: tile.position });
+        }
+
+        const cardCollection = collection(tileRef, "cards");
+        for (const card of tile.cards) {
+          if (card.id.startsWith("temp-")) {
+            const cardDocRef = doc(cardCollection);
+            card.id = cardDocRef.id;
+            batch.set(cardDocRef, card);
           } else {
-            batch.set(cardRef, card);
+            const cardRef = doc(cardCollection, card.id);
+            const cardDoc = await getDoc(cardRef);
+            if (cardDoc.exists()) {
+              batch.update(cardRef, card);
+            } else {
+              batch.set(cardRef, card);
+            }
           }
         }
       }
-    }
 
-    // Delete moved cards from their original tiles
-    for (const cardId in movedCards) {
-      const originalTileId = movedCards[cardId];
-      const tileRef = doc(tileCollection, originalTileId);
-      const cardCollection = collection(tileRef, "cards");
-      const cardRef = doc(cardCollection, cardId);
-      batch.delete(cardRef);
-    }
-
-    // Delete removed cards
-    for (const tileId in removedCardIds) {
-      const tileRef = doc(tileCollection, tileId);
-      const cardCollection = collection(tileRef, "cards");
-      for (const cardId of removedCardIds[tileId]) {
+      // Delete moved cards from their original tiles
+      for (const cardId in movedCards) {
+        const originalTileId = movedCards[cardId];
+        const tileRef = doc(tileCollection, originalTileId);
+        const cardCollection = collection(tileRef, "cards");
         const cardRef = doc(cardCollection, cardId);
         batch.delete(cardRef);
       }
+
+      // Delete removed cards
+      for (const tileId in removedCardIds) {
+        const tileRef = doc(tileCollection, tileId);
+        const cardCollection = collection(tileRef, "cards");
+        for (const cardId of removedCardIds[tileId]) {
+          const cardRef = doc(cardCollection, cardId);
+          batch.delete(cardRef);
+        }
+      }
+
+      removedTileIds.forEach((id) => {
+        const tileRef = doc(db, "users", username, "tiles", id as string);
+        batch.delete(tileRef);
+      });
+
+      await batch.commit();
+      setRemovedTileIds(new Set());
+      setRemovedCardIds({});
+      setIsSaving(false);
+      setHasSavedOnce(true);
     }
-
-    removedTileIds.forEach((id) => {
-      const tileRef = doc(db, "users", "test", "tiles", id as string);
-      batch.delete(tileRef);
-    });
-
-    await batch.commit();
-    setRemovedTileIds(new Set());
-    setRemovedCardIds({});
-    setIsSaving(false);
-    setHasSavedOnce(true);
   };
 
   // Add a new state variable for the id of the tile that has its menu open
@@ -410,7 +432,6 @@ export default function MainApp() {
     return () => clearTimeout(timeoutId);
   }, [isSaving, hasSavedOnce]);
 
-  
   return (
     <div className="min-h-screen bg-gray-100">
       <div>
