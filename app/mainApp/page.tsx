@@ -18,6 +18,7 @@ type Card = {
   id: string;
   name: string;
   position: number;
+  description: string;
 };
 
 type Tile = {
@@ -120,6 +121,7 @@ export default function MainApp() {
         id: `temp-${Math.random().toString(36).substr(2, 9)}`,
         name: newCardName,
         position: newPosition,
+        description: "",
       };
 
       // Add the card to the tile
@@ -419,11 +421,53 @@ export default function MainApp() {
     }
   }, [newName]);
 
+  const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const resizeTextArea = () => {
+      if (descriptionRef.current) {
+        descriptionRef.current.style.height = "128px";
+        descriptionRef.current.style.height = `${descriptionRef.current.scrollHeight}px`;
+      }
+    };
+
+    resizeTextArea();
+
+    if (descriptionRef.current) {
+      descriptionRef.current.addEventListener("input", resizeTextArea);
+      return () => {
+        if (descriptionRef.current) {
+          descriptionRef.current.removeEventListener("input", resizeTextArea);
+        }
+      };
+    }
+  }, [selectedCard?.description, isModalOpen]);
+
+  const nameRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const resizeTextArea = () => {
+      if (nameRef.current) {
+        nameRef.current.style.height = "28px";
+        nameRef.current.style.height = `${nameRef.current.scrollHeight}px`;
+      }
+    };
+
+    resizeTextArea();
+
+    if (nameRef.current) {
+      nameRef.current.addEventListener("input", resizeTextArea);
+      return () => {
+        if (nameRef.current) {
+          nameRef.current.removeEventListener("input", resizeTextArea);
+        }
+      };
+    }
+  }, [selectedCard?.name, isModalOpen]);
+
   const [showSaved, setShowSaved] = useState(false);
   const [hasSavedOnce, setHasSavedOnce] = useState(false);
-
- const [selectedCard, setSelectedCard] = useState(null);
- const [isModalOpen, setIsModalOpen] = useState(false);
 
   //timeout to show saved message
   useEffect(() => {
@@ -484,11 +528,11 @@ export default function MainApp() {
                                     handleNameChange(tile.id)
                                   }
                                   autoFocus
-                                  className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500 block"
                                 />
                               ) : (
                                 <div
-                                  className="text-xl p-0.5 pl-2 mr-2 font-bold break-words cursor-pointer"
+                                  className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow cursor-pointer block"
                                   onClick={() => {
                                     setEditingTileId(tile.id);
                                     setNewName(tile.name || "");
@@ -533,26 +577,18 @@ export default function MainApp() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative flex items-center justify-between"
+                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
                                             onClick={() => {
+                                              setSelectedTile(tile);
                                               setSelectedCard(card);
                                               setIsModalOpen(true);
                                             }}
                                           >
-                                            <h3 className="text-lg font-semibold">
-                                              {card.name}
-                                            </h3>
-                                            <button
-                                              onClick={() =>
-                                                handleRemoveCard(
-                                                  tile.id,
-                                                  card.id
-                                                )
-                                              }
-                                              className="p-2 w-6 h-6 rounded-lg hover:bg-red-100 flex items-center justify-center"
-                                            >
-                                              ✖
-                                            </button>
+                                            <div>
+                                              <h3 className="text-lg font-semibold break-words">
+                                                {card.name}
+                                              </h3>
+                                            </div>
                                           </div>
                                         )}
                                       </Draggable>
@@ -690,53 +726,75 @@ export default function MainApp() {
           Save
         </button>
       </div>
-      {isModalOpen && (
+      {isModalOpen && selectedCard && selectedTile && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="bg-white p-4 rounded-2xl shadow flex flex-col"
+            className="bg-white  rounded-2xl p-2 shadow flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start font-bold text-lg">
-              <input
-                type="text"
-                className="mt-2"
+            <div className="flex justify-between space-x-40 items-center font-bold text-lg mb-2">
+              <textarea
+                ref={nameRef}
+                className="flex-grow resize-none p-0.5 pl-2 ml-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={selectedCard.name}
-                onChange={(e) =>
-                  setSelectedCard({ ...selectedCard, name: e.target.value })
-                }
+                onChange={(e) => {
+                  setSelectedCard({ ...selectedCard, name: e.target.value });
+                  // Find the card in the tiles state and update its name
+                  tiles.forEach((tile) => {
+                    tile.cards.forEach((card) => {
+                      if (card.id === selectedCard.id) {
+                        card.name = e.target.value;
+                      }
+                    });
+                  });
+                }}
               />
-              <button className="m-2" onClick={() => setIsModalOpen(false)}>
+              <button
+                className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-100"
+                onClick={() => setIsModalOpen(false)}
+              >
                 ✖
               </button>
             </div>
-            <form
-              className="flex flex-col space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                // Update the card in your state here
-                setIsModalOpen(false);
-              }}
-            >
-              <label className="flex flex-col text-lg font-bold">
-                Description
+            <div className="flex justify-between space-x-16 items-start">
+              <div className="p-2">
+                <label className="text-lg pl-1 font-bold">Description</label>
                 <textarea
-                  className="mt-2"
+                  ref={descriptionRef}
+                  className="mt-2 resize-none rounded-xl p-2 w-full h-20 border border-gray-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
                   value={selectedCard.description || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setSelectedCard({
                       ...selectedCard,
                       description: e.target.value,
-                    })
-                  }
+                    });
+                    // Find the card in the tiles state and update its description
+                    tiles.forEach((tile) => {
+                      tile.cards.forEach((card) => {
+                        if (card.id === selectedCard.id) {
+                          card.description = e.target.value;
+                        }
+                      });
+                    });
+                  }}
                 />
-              </label>
-              <button type="submit" className="mt-4">
-                Save
-              </button>
-            </form>
+              </div>
+              <div className="mt-10">
+                <button
+                  className="m-1 p-2 bg-red-300 hover:bg-red-500 text-white rounded-lg"
+                  onClick={() => {
+                    // Add your remove logic here
+                    handleRemoveCard(selectedTile.id, selectedCard.id);
+                    setIsModalOpen(false);
+                  }}
+                >
+                  Remove Card
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
