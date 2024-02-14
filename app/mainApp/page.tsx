@@ -422,6 +422,9 @@ export default function MainApp() {
   const [showSaved, setShowSaved] = useState(false);
   const [hasSavedOnce, setHasSavedOnce] = useState(false);
 
+ const [selectedCard, setSelectedCard] = useState(null);
+ const [isModalOpen, setIsModalOpen] = useState(false);
+
   //timeout to show saved message
   useEffect(() => {
     let timeoutId: any;
@@ -531,6 +534,10 @@ export default function MainApp() {
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
                                             className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative flex items-center justify-between"
+                                            onClick={() => {
+                                              setSelectedCard(card);
+                                              setIsModalOpen(true);
+                                            }}
                                           >
                                             <h3 className="text-lg font-semibold">
                                               {card.name}
@@ -683,6 +690,56 @@ export default function MainApp() {
           Save
         </button>
       </div>
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="bg-white p-4 rounded-2xl shadow flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start font-bold text-lg">
+              <input
+                type="text"
+                className="mt-2"
+                value={selectedCard.name}
+                onChange={(e) =>
+                  setSelectedCard({ ...selectedCard, name: e.target.value })
+                }
+              />
+              <button className="m-2" onClick={() => setIsModalOpen(false)}>
+                ✖
+              </button>
+            </div>
+            <form
+              className="flex flex-col space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                // Update the card in your state here
+                setIsModalOpen(false);
+              }}
+            >
+              <label className="flex flex-col text-lg font-bold">
+                Description
+                <textarea
+                  className="mt-2"
+                  value={selectedCard.description || ""}
+                  onChange={(e) =>
+                    setSelectedCard({
+                      ...selectedCard,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <button type="submit" className="mt-4">
+                Save
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
