@@ -376,7 +376,8 @@ export default function MainApp() {
 
   //handle the button click
   const handleButtonClick = (id: string, event: React.MouseEvent) => {
-    const rect = (event.target as Element).getBoundingClientRect();
+    const rect = (event.currentTarget as Element).getBoundingClientRect();
+
     setOpenTileId(id);
     setMenuPosition({
       top: rect.top,
@@ -766,7 +767,7 @@ export default function MainApp() {
                 <label className="text-lg pl-1 font-bold">Description</label>
                 <textarea
                   ref={descriptionRef}
-                  className="mt-2 resize-none rounded-xl p-2 w-full h-20 border border-gray-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
+                  className="mt-2 resize-none rounded-xl p-2 w-full h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
                   value={selectedCard.description || ""}
                   onChange={(e) => {
                     setSelectedCard({
