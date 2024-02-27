@@ -15,8 +15,12 @@ import { useRouter } from "next/navigation";
 import { Cards } from "./_components/cards";
 import { TileMenu } from "./_components/tileMenu";
 import { AddCard } from "./_components/addCard";
+import { AddTile } from "./_components/addTile";
 import { useAddCard } from "./_hooks/useAddCard";
 import { useTileMenu } from "./_hooks/useTileMenu";
+import { useAddTile } from "./_hooks/useAddTile";
+import { Tiles } from "./_components/tiles";
+import { useHandleDrag } from "./_hooks/useHandleDrag";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -34,11 +38,9 @@ export type Tile = {
 };
 
 export default function MainApp() {
-  const [name, setName] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
-  const [isClicked, setIsClicked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
   const auth = getAuth(firebase_app);
@@ -85,39 +87,6 @@ export default function MainApp() {
     fetchTiles();
   }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // handle adding tiles
-  const handleAddTile = () => {
-    const newPosition = tiles.length;
-    const newTile = {
-      name,
-      position: newPosition,
-      id: `temp-${Math.random().toString(36).substr(2, 9)}`,
-      cards: [],
-    };
-    setName("");
-    // Add the new tile locally
-    setTiles([...tiles, newTile]);
-    setIsClicked(false);
-  };
-
-  const {
-    openTileId,
-    menuRef,
-    buttonRef,
-    menuPosition,
-    handleButtonClick,
-    handleRemoveTile,
-  } = useTileMenu(tiles, setTiles, removedTileIds, setRemovedTileIds);
-
-  //mrdka
-  const {
-    newCardName,
-    setNewCardName,
-    addCardRef,
-    expandedTileId,
-    handleAddCardClick,
-    handleAddCard,
-  } = useAddCard(tiles, setTiles);
 
   const [removedCardIds, setRemovedCardIds] = useState<{
     [tileId: string]: string[];
@@ -160,85 +129,14 @@ export default function MainApp() {
     setNewName("");
   };
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [movedCards, setMovedCards] = useState<{ [key: string]: string }>({});
+  
 
-  // Handle the drag and drop
-  const handleDragEnd = (result: any) => {
-    setIsDragging(true);
-    const { source, destination, draggableId, type } = result;
 
-    // Ignore drops outside of a droppable area
-    if (!destination) {
-      setIsDragging(false);
-      return;
-    }
-
-    if (type === "tile") {
-      // Handle tile reordering
-      const newTiles = Array.from(tiles);
-      const [removed] = newTiles.splice(source.index, 1);
-      newTiles.splice(destination.index, 0, removed);
-
-      // Update the position of each tile
-      newTiles.forEach((tile, index) => {
-        tile.position = index;
-      });
-
-      setTiles(newTiles);
-    } else {
-      // Handle card reordering
-      const startTileId = source.droppableId.split("-")[1];
-      const endTileId = destination.droppableId.split("-")[1];
-
-      const startTile = tiles.find((tile) => tile.id === startTileId);
-      const endTile = tiles.find((tile) => tile.id === endTileId);
-
-      // Check if startTile and endTile are not undefined
-      if (!startTile || !endTile) {
-        throw new Error("Tile not found");
-      }
-
-      // Moving within the same tile
-      if (startTileId === endTileId) {
-        const newCards = Array.from(startTile.cards);
-        const [removed] = newCards.splice(source.index, 1);
-        newCards.splice(destination.index, 0, removed);
-
-        // Update the position of each card
-        newCards.forEach((card, index) => {
-          card.position = index;
-        });
-
-        startTile.cards = newCards;
-      } else {
-        // Moving to a different tile
-        const startCards = Array.from(startTile.cards);
-        const [removed] = startCards.splice(source.index, 1);
-        const endCards = Array.from(endTile.cards);
-        endCards.splice(destination.index, 0, removed);
-
-        // Update the position of each card in the start and end tiles
-        startCards.forEach((card, index) => {
-          card.position = index;
-        });
-        endCards.forEach((card, index) => {
-          card.position = index;
-        });
-
-        startTile.cards = startCards;
-        endTile.cards = endCards;
-
-        setMovedCards((prevMovedCards) => ({
-          ...prevMovedCards,
-          [removed.id]: startTileId,
-        }));
-      }
-
-      setTiles([...tiles]);
-    }
-    setIsDragging(false);
-  };
+  const { handleDragEnd, isDragging, movedCards } = useHandleDrag(
+    tiles,
+    setTiles,
+  );
+  
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -309,19 +207,7 @@ export default function MainApp() {
   };
   const tileRef = useRef<HTMLDivElement>(null);
 
-  // Add an effect to close the menu when clicking outside tile
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
-        setIsClicked(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -419,150 +305,25 @@ export default function MainApp() {
           </div>
         )}
       </div>
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="all-tiles" direction="horizontal" type="tile">
-          {(provided) => (
-            <div
-              className="flex"
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-            >
-              {tiles
-                .sort((a, b) => a.position - b.position)
-                .map((tile, index) => (
-                  <Draggable key={tile.id} draggableId={tile.id} index={index}>
-                    {(provided) => (
-                      <>
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className="p-2 bg-white flex-shrink-0 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
-                        >
-                          {/* Add the ref to the button */}
-                          <div className="grid grid-cols-12 gap-2 items-start">
-                            <div className="col-span-10">
-                              {editingTileId === tile.id ? (
-                                <textarea
-                                  ref={textareaRef}
-                                  value={newName}
-                                  onChange={(e) => setNewName(e.target.value)}
-                                  onBlur={() => handleNameChange(tile.id)}
-                                  onKeyDown={(e) =>
-                                    e.key === "Enter" &&
-                                    handleNameChange(tile.id)
-                                  }
-                                  autoFocus
-                                  className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500 block"
-                                />
-                              ) : (
-                                <div
-                                  className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow cursor-pointer block"
-                                  onClick={() => {
-                                    setEditingTileId(tile.id);
-                                    setNewName(tile.name || "");
-                                  }}
-                                >
-                                  <h2>{tile.name || "edit"}</h2>
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              ref={buttonRef}
-                              onClick={(event) =>
-                                handleButtonClick(tile.id, event)
-                              }
-                              className="col-span-2 text-xl p-2.5 rounded-xl hover:bg-gray-100 justify-self-end box-content"
-                            >
-                              <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
-                              <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
-                              <span className="w-4 h-0.5 bg-black block rounded-full"></span>
-                            </button>
-                          </div>
-                          <div>
-                            <Cards
-                              setSelectedTile={setSelectedTile}
-                              tile={tile}
-                              setSelectedCard={setSelectedCard}
-                              setIsModalOpen={setIsModalOpen}
-                            />
-                            <div>
-                              <AddCard
-                                expandedTileId={expandedTileId}
-                                tile={tile}
-                                addCardRef={addCardRef}
-                                newCardName={newCardName}
-                                setNewCardName={setNewCardName}
-                                handleAddCard={handleAddCard}
-                                handleAddCardClick={handleAddCardClick}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <TileMenu
-                          openTileId={openTileId}
-                          tile={tile}
-                          menuPosition={menuPosition}
-                          menuRef={menuRef}
-                          handleRemoveTile={handleRemoveTile}
-                        />
-                      </>
-                    )}
-                  </Draggable>
-                ))}
-              {provided.placeholder}
-              <div
-                ref={tileRef}
-                onClick={(event) => {
-                  if (
-                    buttonRef.current &&
-                    buttonRef.current.contains(event.target as Node)
-                  ) {
-                    return;
-                  }
-                  event.stopPropagation();
-                  setIsClicked(true);
-                }}
-                className={`self-start p-4 rounded-2xl shadow m-2 w-64 flex-shrink-0 relative ${
-                  isClicked
-                    ? "bg-white"
-                    : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70 cursor-pointer"
-                } ${isClicked ? "h-auto" : "min-h-20"} ${
-                  isClicked ? "" : "flex items-center justify-center"
-                }`}
-              >
-                {isClicked ? (
-                  <div className="flex flex-col">
-                    <input
-                      type="text"
-                      placeholder="Enter name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault(); // Prevent form submission
-                          handleAddTile();
-                        }
-                      }}
-                      autoFocus
-                      className="mb-2 px-2 py-1 border-2 border-gray-200 rounded-xl w-full"
-                    />
-                    <button
-                      ref={buttonRef}
-                      onClick={handleAddTile}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-xl w-full"
-                    >
-                      Add Tile
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-4xl">+</p>
-                )}
-              </div>
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+
+      <Tiles
+        tiles={tiles}
+        setTiles={setTiles}
+        handleDragEnd={handleDragEnd}
+        removedTileIds={removedTileIds}
+        setRemovedTileIds={setRemovedTileIds}
+        tileRef={tileRef}
+        setSelectedTile={setSelectedTile}
+        setSelectedCard={setSelectedCard}
+        setIsModalOpen={setIsModalOpen}
+        editingTileId={editingTileId}
+        setEditingTileId={setEditingTileId}
+        newName={newName}
+        setNewName={setNewName}
+        handleNameChange={handleNameChange}
+        textareaRef={textareaRef}
+      />
+
       <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
         <button
           disabled={isDragging}
@@ -612,7 +373,7 @@ export default function MainApp() {
                 <label className="text-lg pl-1 font-bold">Description</label>
                 <textarea
                   ref={descriptionRef}
-                  className="mt-2 resize-none rounded-xl p-2 w-full h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
+                  className="mt-2 resize-none rounded-xl p-2 w-full overflow-hidden h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
                   value={selectedCard.description || ""}
                   onChange={(e) => {
                     setSelectedCard({
