@@ -10,19 +10,23 @@ import {
 } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import ReactDOM from "react-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { Cards } from "./_components/cards";
+import { TileMenu } from "./_components/tileMenu";
+import { AddCard } from "./_components/addCard";
+import { useAddCard } from "./_hooks/useAddCard";
+import { useTileMenu } from "./_hooks/useTileMenu";
 
 // Define the types for the cards and tiles
-type Card = {
+export type Card = {
   id: string;
   name: string;
   position: number;
   description: string;
 };
 
-type Tile = {
+export type Tile = {
   id: string;
   name: string;
   position: number;
@@ -33,7 +37,7 @@ export default function MainApp() {
   const [name, setName] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
-  const [removedTileIds, setRemovedTileIds] = useState(new Set());
+  const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
   const [isClicked, setIsClicked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -96,50 +100,25 @@ export default function MainApp() {
     setIsClicked(false);
   };
 
-  // handle removing tiles
-  const handleRemoveTile = (id: string) => {
-    setTiles(tiles.filter((tile) => tile.id !== id));
-    setRemovedTileIds((prev) => new Set(prev).add(id));
-  };
+  const {
+    openTileId,
+    menuRef,
+    buttonRef,
+    menuPosition,
+    handleButtonClick,
+    handleRemoveTile,
+  } = useTileMenu(tiles, setTiles, removedTileIds, setRemovedTileIds);
 
-  const [expandedTileId, setExpandedTileId] = useState<string | null>(null);
-  const [newCardName, setNewCardName] = useState("");
-  const addCardRef = useRef<HTMLDivElement>(null);
+  //mrdka
+  const {
+    newCardName,
+    setNewCardName,
+    addCardRef,
+    expandedTileId,
+    handleAddCardClick,
+    handleAddCard,
+  } = useAddCard(tiles, setTiles);
 
-  const handleAddCardClick = (tileId: string) => {
-    setExpandedTileId(tileId);
-  };
-
-  // Add a new card to a tile
-  const handleAddCard = (tileId: string) => {
-    // Find the tile to which the card will be added
-    const tile = tiles.find((tile) => tile.id === tileId);
-    // Determine the position for the new card
-    const newPosition = tile ? tile.cards.length : 0;
-
-    if (newCardName.trim() !== "") {
-      // Create a new card
-      const newCard = {
-        id: `temp-${Math.random().toString(36).substr(2, 9)}`,
-        name: newCardName,
-        position: newPosition,
-        description: "",
-      };
-
-      // Add the card to the tile
-      setTiles((prevTiles) =>
-        prevTiles.map((tile) =>
-          tile.id === tileId
-            ? { ...tile, cards: [...tile.cards, newCard] }
-            : tile
-        )
-      );
-
-      // Reset the state
-      setNewCardName("");
-      setExpandedTileId(null);
-    }
-  };
   const [removedCardIds, setRemovedCardIds] = useState<{
     [tileId: string]: string[];
   }>({});
@@ -161,23 +140,6 @@ export default function MainApp() {
       return newRemovedCardIds;
     });
   };
-
-  // handle clicking outside addcard button
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        addCardRef.current &&
-        !addCardRef.current.contains(event.target as Node)
-      ) {
-        setExpandedTileId(null);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [addCardRef]);
 
   // Add a new state variable for the id of the tile that is being edited
   const [editingTileId, setEditingTileId] = useState<string | null>(null);
@@ -345,46 +307,6 @@ export default function MainApp() {
       setHasSavedOnce(true);
     }
   };
-
-  // Add a new state variable for the id of the tile that has its menu open
-  const [openTileId, setOpenTileId] = useState<string | null>(null);
-
-  // Add a ref for the menu and the button
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-
-  //listener when the component mounts
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setOpenTileId(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-
-  //handle the button click
-  const handleButtonClick = (id: string, event: React.MouseEvent) => {
-    const rect = (event.currentTarget as Element).getBoundingClientRect();
-
-    setOpenTileId(id);
-    setMenuPosition({
-      top: rect.top,
-      left: rect.left,
-    });
-  };
-
   const tileRef = useRef<HTMLDivElement>(null);
 
   // Add an effect to close the menu when clicking outside tile
@@ -558,109 +480,32 @@ export default function MainApp() {
                             </button>
                           </div>
                           <div>
-                            <Droppable
-                              droppableId={`tile-${tile.id}`}
-                              type="card"
-                            >
-                              {(provided) => (
-                                <div
-                                  {...provided.droppableProps}
-                                  ref={provided.innerRef}
-                                >
-                                  {tile.cards
-                                    .sort((a, b) => a.position - b.position) // Sort the cards by position
-                                    .map((card, cardIndex) => (
-                                      <Draggable
-                                        key={card.id}
-                                        draggableId={card.id}
-                                        index={cardIndex}
-                                      >
-                                        {(provided) => (
-                                          <div
-                                            ref={provided.innerRef}
-                                            {...provided.draggableProps}
-                                            {...provided.dragHandleProps}
-                                            className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
-                                            onClick={() => {
-                                              setSelectedTile(tile);
-                                              setSelectedCard(card);
-                                              setIsModalOpen(true);
-                                            }}
-                                          >
-                                            <div>
-                                              <h3 className="text-lg font-semibold break-words">
-                                                {card.name}
-                                              </h3>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </Draggable>
-                                    ))}
-                                  {provided.placeholder}
-                                </div>
-                              )}
-                            </Droppable>
-                            {expandedTileId === tile.id ? (
-                              <div ref={addCardRef}>
-                                <input
-                                  type="text"
-                                  value={newCardName}
-                                  onChange={(e) =>
-                                    setNewCardName(e.target.value)
-                                  }
-                                  onKeyDown={(event) => {
-                                    if (event.key === "Enter") {
-                                      handleAddCard(tile.id);
-                                    }
-                                  }}
-                                  autoFocus
-                                  className="mt-2 border rounded-xl p-2"
-                                />
-                                <button
-                                  onClick={() => handleAddCard(tile.id)}
-                                  className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleAddCardClick(tile.id)}
-                                className="w-full mt-2 rounded-xl p-2 shadow bg-gray-100 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
-                              >
-                                <span className="text-2xl">+</span>
-                              </button>
-                            )}
+                            <Cards
+                              setSelectedTile={setSelectedTile}
+                              tile={tile}
+                              setSelectedCard={setSelectedCard}
+                              setIsModalOpen={setIsModalOpen}
+                            />
+                            <div>
+                              <AddCard
+                                expandedTileId={expandedTileId}
+                                tile={tile}
+                                addCardRef={addCardRef}
+                                newCardName={newCardName}
+                                setNewCardName={setNewCardName}
+                                handleAddCard={handleAddCard}
+                                handleAddCardClick={handleAddCardClick}
+                              />
+                            </div>
                           </div>
                         </div>
-                        {/* Only show the menu if the openTileId matches the id of this tile */}
-                        {openTileId === tile.id &&
-                          ReactDOM.createPortal(
-                            <div
-                              ref={menuRef}
-                              style={{
-                                position: "fixed",
-                                ...menuPosition,
-                              }}
-                              className="mt-10 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                            >
-                              <div
-                                className="py-1"
-                                role="menu"
-                                aria-orientation="vertical"
-                                aria-labelledby="options-menu"
-                              >
-                                <button
-                                  onClick={() => handleRemoveTile(tile.id)}
-                                  className="block w-full rounded-xl text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                  role="menuitem"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>,
-                            document.body
-                          )}
+                        <TileMenu
+                          openTileId={openTileId}
+                          tile={tile}
+                          menuPosition={menuPosition}
+                          menuRef={menuRef}
+                          handleRemoveTile={handleRemoveTile}
+                        />
                       </>
                     )}
                   </Draggable>
