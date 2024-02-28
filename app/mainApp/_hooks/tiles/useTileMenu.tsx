@@ -1,7 +1,7 @@
 // useTileMenu.ts
 
 import { useState, useEffect, useRef } from "react";
-import { Tile } from "../page";
+import { Tile } from "../../page";
 
 export const useTileMenu = (
   tiles: Tile[],

@@ -1,7 +1,11 @@
 import { useState, useEffect, RefObject } from "react";
-import { Tile } from "../page";
+import { Tile } from "../../page";
 
-export const useAddTile = (tiles: Tile[], setTiles: (tiles: Tile[]) => void, tileRef: RefObject<HTMLDivElement>) => {
+export const useAddTile = (
+  tiles: Tile[],
+  setTiles: (tiles: Tile[]) => void,
+  tileRef: RefObject<HTMLDivElement>
+) => {
   const [name, setName] = useState("");
   const [isClicked, setIsClicked] = useState(false);
   // Add an effect to close the menu when clicking outside tile

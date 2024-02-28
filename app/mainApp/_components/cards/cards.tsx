@@ -1,15 +1,20 @@
 import { Draggable, Droppable } from "@hello-pangea/dnd";
-import { Card, Tile} from "../page";
-
+import { Card, Tile } from "../../page";
 
 interface CardsComponentProps {
-    tile: Tile;
-    setSelectedTile: (tile: Tile | null) => void; // Added missing property
-    setSelectedCard: (card: Card | null) => void;
-    setIsModalOpen: (isOpen: boolean) => void;
+  tile: Tile;
+  setSelectedTile: (tile: Tile | null) => void; // Added missing property
+  setSelectedCard: (card: Card | null) => void;
+  setIsModalOpen: (isOpen: boolean) => void;
 }
 
-export const Cards: React.FC<CardsComponentProps>= ({ tile, setSelectedTile, setSelectedCard, setIsModalOpen })=> { // Updated parameter name
+export const Cards: React.FC<CardsComponentProps> = ({
+  tile,
+  setSelectedTile,
+  setSelectedCard,
+  setIsModalOpen,
+}) => {
+  // Updated parameter name
   return (
     <Droppable droppableId={`tile-${tile.id}`} type="card">
       {(provided) => (
@@ -23,7 +28,7 @@ export const Cards: React.FC<CardsComponentProps>= ({ tile, setSelectedTile, set
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    className="shadow bg-gray-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
+                    className="shadow bg-slate-100 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
                     onClick={() => {
                       setSelectedTile(tile);
                       setSelectedCard(card);
@@ -44,4 +49,4 @@ export const Cards: React.FC<CardsComponentProps>= ({ tile, setSelectedTile, set
       )}
     </Droppable>
   );
-}
+};

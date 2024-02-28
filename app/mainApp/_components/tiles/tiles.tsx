@@ -1,15 +1,16 @@
-import { RefObject } from "react";
+import { RefObject, useRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { AddTile } from "./addTile";
-import { Cards } from "./cards";
-import { AddCard } from "./addCard";
+import { Cards } from "../cards/cards";
+import { AddCard } from "../cards/addCard";
 import { TileMenu } from "./tileMenu";
-import { Tile } from "../page";
-import { Card } from "../page";
-import { useAddTile } from "../_hooks/useAddTile";
-import { useTileMenu } from "../_hooks/useTileMenu";
-import { useAddCard } from "../_hooks/useAddCard";
+import { Tile } from "../../page";
+import { Card } from "../../page";
+import { useAddTile } from "../../_hooks/tiles/useAddTile";
+import { useTileMenu } from "../../_hooks/tiles/useTileMenu";
+import { useAddCard } from "../../_hooks/cards/useAddCard";
 import { Dispatch, SetStateAction } from "react";
+import { useTileNameChange } from "../../_hooks/tiles/useTileNameChange";
 
 interface TilesProps {
   tiles: Tile[];
@@ -17,16 +18,9 @@ interface TilesProps {
   handleDragEnd: (result: any) => void; // Replace with the actual type of the result
   removedTileIds: Set<string>;
   setRemovedTileIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  tileRef: RefObject<HTMLDivElement>;
   setSelectedTile: React.Dispatch<React.SetStateAction<Tile | null>>;
   setSelectedCard: React.Dispatch<React.SetStateAction<Card | null>>;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  editingTileId: string | null;
-  setEditingTileId: React.Dispatch<React.SetStateAction<string | null>>;
-  newName: string;
-  setNewName: React.Dispatch<React.SetStateAction<string>>;
-  handleNameChange: (id: string) => void;
-  textareaRef: RefObject<HTMLTextAreaElement>;
 }
 
 export const Tiles: React.FC<TilesProps> = ({
@@ -35,20 +29,26 @@ export const Tiles: React.FC<TilesProps> = ({
   handleDragEnd,
   removedTileIds,
   setRemovedTileIds,
-  tileRef,
   setSelectedTile,
   setSelectedCard,
   setIsModalOpen,
-  editingTileId,
-  setEditingTileId,
-  newName,
-  setNewName,
-  handleNameChange,
-  textareaRef,
 }) => {
+  const tileRef = useRef<HTMLDivElement>(null);
+
+  //hook for changing tile name
+  const {
+    editingTileId,
+    setEditingTileId,
+    newName,
+    setNewName,
+    handleNameChange,
+    textareaRef,
+  } = useTileNameChange(tiles, setTiles);
+
+  //handle for adding tiles
   const { name, setName, isClicked, setIsClicked, handleAddTile } = useAddTile(
     tiles,
-      setTiles,
+    setTiles,
     tileRef
   );
 
@@ -71,6 +71,7 @@ export const Tiles: React.FC<TilesProps> = ({
     handleAddCardClick,
     handleAddCard,
   } = useAddCard(tiles, setTiles);
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <Droppable droppableId="all-tiles" direction="horizontal" type="tile">

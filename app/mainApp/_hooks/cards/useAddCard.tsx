@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Tile } from "../page"; // adjust the path according to your directory structure
+import { Tile } from "../../page"; // adjust the path according to your directory structure
 
 export const useAddCard = (
   tiles: Tile[],

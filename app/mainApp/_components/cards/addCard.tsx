@@ -1,4 +1,4 @@
-import { Tile } from "../page"; // adjust the path according to your directory structure
+import { Tile } from "../../page"; // adjust the path according to your directory structure
 
 interface AddCardProps {
   expandedTileId: string | null;
@@ -45,7 +45,7 @@ export const AddCard: React.FC<AddCardProps> = ({
       ) : (
         <button
           onClick={() => handleAddCardClick(tile.id)}
-          className="w-full mt-2 rounded-xl p-2 shadow bg-gray-100 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
+          className="w-full mt-2 rounded-xl p-2 shadow bg-slate-200 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
         >
           <span className="text-2xl">+</span>
         </button>
