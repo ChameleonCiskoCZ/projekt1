@@ -10,7 +10,8 @@ export const useSave = (
   setRemovedTileIds: React.Dispatch<React.SetStateAction<Set<string>>>,
   movedCards: any,
   removedCardIds: any,
-  setRemovedCardIds: React.Dispatch<React.SetStateAction<any>>
+  setRemovedCardIds: React.Dispatch<React.SetStateAction<any>>,
+  workspaceId: string
 ) => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasSavedOnce, setHasSavedOnce] = useState(false);
@@ -19,7 +20,14 @@ export const useSave = (
     setIsSaving(true);
     const batch = writeBatch(db);
     if (username) {
-      const tileCollection = collection(db, "users", username, "tiles");
+      const tileCollection = collection(
+        db,
+        "users",
+        username,
+        "workspaces",
+        workspaceId,
+        "tiles"
+      );
 
       // Save new and updated tiles and cards
       for (const tile of tiles) {
@@ -71,7 +79,15 @@ export const useSave = (
       }
 
       removedTileIds.forEach((id) => {
-        const tileRef = doc(db, "users", username, "tiles", id as string);
+        const tileRef = doc(
+          db,
+          "users",
+          username,
+          "workspaces",
+          workspaceId,
+          "tiles",
+          id as string
+        );
         batch.delete(tileRef);
       });
 

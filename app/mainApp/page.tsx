@@ -1,15 +1,13 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import firebase_app from "@/firebase";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { useRouter } from "next/navigation";
 import { Tiles } from "./_components/tiles/tiles";
 import { useHandleDrag } from "./_hooks/useHandleDrag";
-import { useTileNameChange } from "./_hooks/tiles/useTileNameChange";
 import { useSave } from "./_hooks/useSave";
 import { CardModal } from "./_components/cards/cardModal";
 import { useRemoveCard } from "./_hooks/cards/useRemoveCard";
+import { useAuth } from "../_hooks/useAuth";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -25,42 +23,30 @@ export type Tile = {
   position: number;
   cards: Card[];
 };
+interface MainAppProps {
+  workspaceId: string;
+}
 
-export default function MainApp() {
+export const MainApp: React.FC<MainAppProps> = ({ workspaceId }) => {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
 
-  const router = useRouter();
-  const auth = getAuth(firebase_app);
-  const [username, setUsername] = useState<string | null>(null);
 
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Set up a subscription to the auth object
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUsername(user.displayName);
-      } else {
-        setUsername(null);
-        router.push("/login");
-      }
-    });
 
-    // Clean up the subscription on unmount
-    return () => unsubscribe();
-  }, []);
-
+  const username = useAuth();
+ 
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
     const fetchTiles = async () => {
       if (username) {
         // Fetch the user's document from the users collection
-        const tileCollection = collection(db, "users", username, "tiles");
+        const tileCollection = collection(db, "users", username, "workspaces", workspaceId, "tiles");
 
         const tileSnapshot = await getDocs(tileCollection);
         const tiles = await Promise.all(
@@ -99,7 +85,8 @@ export default function MainApp() {
     setRemovedTileIds,
     movedCards,
     removedCardIds,
-    setRemovedCardIds
+    setRemovedCardIds,
+    workspaceId
   );
 
 

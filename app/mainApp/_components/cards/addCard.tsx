@@ -45,7 +45,7 @@ export const AddCard: React.FC<AddCardProps> = ({
       ) : (
         <button
           onClick={() => handleAddCardClick(tile.id)}
-          className="w-full mt-2 rounded-xl p-2 shadow bg-slate-200 bg-opacity-10 hover:bg-gray-20 hover:bg-opacity-70"
+          className="w-full mt-2 rounded-xl p-2 shadow shadow-sky-200 bg-sky-200 bg-opacity-20 hover:bg-gray-20 hover:bg-opacity-40"
         >
           <span className="text-2xl">+</span>
         </button>

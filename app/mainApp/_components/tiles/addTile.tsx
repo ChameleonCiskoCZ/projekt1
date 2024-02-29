@@ -35,7 +35,7 @@ export const AddTile: React.FC<AddTileProps> = ({
       className={`self-start p-4 rounded-2xl shadow m-2 w-64 flex-shrink-0 relative ${
         isClicked
           ? "bg-white"
-          : "bg-white bg-opacity-40 hover:bg-white hover:bg-opacity-70 cursor-pointer"
+          : "bg-sky-50 shadow-sky-200  hover:bg-sky-100  cursor-pointer"
       } ${isClicked ? "h-auto" : "min-h-20"} ${
         isClicked ? "" : "flex items-center justify-center"
       }`}
