@@ -28,7 +28,7 @@ export const Cards: React.FC<CardsComponentProps> = ({
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    className="shadow shadow-sky-200 bg-sky-200 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
+                    className="shadow  bg-sky-300 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
                     onClick={() => {
                       setSelectedTile(tile);
                       setSelectedCard(card);

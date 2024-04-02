@@ -91,7 +91,7 @@ export const Tiles: React.FC<TilesProps> = ({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className="p-2 bg-white flex-shrink-0 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
+                        className="p-2 bg-white flex-shrink-0 rounded-2xl shadow-lg m-2 w-64 relative flex flex-col self-start"
                       >
                         {/* Add the ref to the button */}
                         <div className="grid grid-cols-12 gap-2 items-start">
