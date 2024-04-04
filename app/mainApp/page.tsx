@@ -8,6 +8,7 @@ import { useSave } from "./_hooks/useSave";
 import { CardModal } from "./_components/cards/cardModal";
 import { useRemoveCard } from "./_hooks/cards/useRemoveCard";
 import { useAuth } from "../_hooks/useAuth";
+import { useSearchParams } from "next/navigation";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -27,26 +28,32 @@ interface MainAppProps {
   workspaceId: string;
 }
 
-export const MainApp: React.FC<MainAppProps> = ({ workspaceId }) => {
+export default function MainApp() {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
-
-
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get('workspaceId');
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-
   const username = useAuth();
- 
+
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
     const fetchTiles = async () => {
-      if (username) {
+      if (username && workspaceId) {
         // Fetch the user's document from the users collection
-        const tileCollection = collection(db, "users", username, "workspaces", workspaceId, "tiles");
+        const tileCollection = collection(
+          db,
+          "users",
+          username,
+          "workspaces",
+          workspaceId,
+          "tiles"
+        );
 
         const tileSnapshot = await getDocs(tileCollection);
         const tiles = await Promise.all(
@@ -65,10 +72,10 @@ export const MainApp: React.FC<MainAppProps> = ({ workspaceId }) => {
     };
 
     fetchTiles();
-  }, [username]); 
+  }, [username]);
 
-
-  const { removedCardIds, setRemovedCardIds, handleRemoveCard } = useRemoveCard(setTiles);
+  const { removedCardIds, setRemovedCardIds, handleRemoveCard } =
+    useRemoveCard(setTiles);
 
   //handle dragging
   const { handleDragEnd, isDragging, movedCards } = useHandleDrag(
@@ -86,9 +93,8 @@ export const MainApp: React.FC<MainAppProps> = ({ workspaceId }) => {
     movedCards,
     removedCardIds,
     setRemovedCardIds,
-    workspaceId
+    workspaceId || "" // Provide a default value of an empty string
   );
-
 
   const [showSaved, setShowSaved] = useState(false);
 

@@ -1,17 +1,32 @@
 // WorkspacePage.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc } from "firebase/firestore"; // adjust the path according to your directory structure
+import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot } from "firebase/firestore"; // adjust the path according to your directory structure
 import { useAuth } from "../_hooks/useAuth";
 import firebase_app from "@/firebase";
-import { MainApp } from "../mainApp/page";
+//import { MainApp } from "../mainApp/page";
 import ReactDOM from "react-dom";
+import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/navigation";
 
-const WorkspacePage = () => {
+type Workspace = {
+  id: string;
+  name: string;
+  invites: {
+    code: string;
+    createdAt: string;
+    usedBy?: string;
+  }[];
+  members?: string[]; // Optional: List of usernames with access
+}
+
+
+export default function WorkspacePage() {
   const db = getFirestore(firebase_app);
-  const [workspaces, setWorkspaces] = useState<
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  /*const [workspaces, setWorkspaces] = useState<
     { id: string; [key: string]: any }[]
-  >([]);
+  >([]);*/
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
     null
@@ -19,26 +34,27 @@ const WorkspacePage = () => {
   const username = useAuth();
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const [isClicked, setIsClicked] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchWorkspaces = async () => {
-      if (username) {
-        const workspaceCollection = collection(
-          db,
-          "users",
-          username,
-          "workspaces"
-        );
-        const workspaceSnapshot = await getDocs(workspaceCollection);
-        const workspaceList = workspaceSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setWorkspaces(workspaceList);
-      }
-    };
+    if(username){
+      const unsubscribe = onSnapshot(
+        collection(db, "users", username, "workspaces"),
+        (querySnapshot) => {
+          const workspaceList = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
 
-    fetchWorkspaces();
+            name: doc.data().name,
+
+            invites: doc.data().invites,
+          }));
+          setWorkspaces(workspaceList);
+        }
+      );
+
+      // Unsubscribe on component unmount to avoid memory leaks
+      return () => unsubscribe();
+    }
   }, [db, username]);
 
   useEffect(() => {
@@ -65,12 +81,15 @@ const WorkspacePage = () => {
         username,
         "workspaces"
       );
-      const newWorkspaceRef = await addDoc(workspaceCollection, {
+      const newWorkspaceRef = doc(workspaceCollection);
+      await setDoc(newWorkspaceRef, {
+        id: newWorkspaceRef.id,
         name: newWorkspaceName,
+        invites: [], // Add the 'invites' property with an empty array
       });
       setWorkspaces([
         ...workspaces,
-        { id: newWorkspaceRef.id, name: newWorkspaceName },
+        { id: newWorkspaceRef.id, name: newWorkspaceName, invites: [] }, // Include the 'invites' property in the new workspace object
       ]);
       setNewWorkspaceName("");
       setIsClicked(false);
@@ -78,7 +97,8 @@ const WorkspacePage = () => {
   };
 
   const handleWorkspaceSelect = (workspaceId: string) => {
-    setSelectedWorkspaceId(workspaceId);
+    //setSelectedWorkspaceId(workspaceId);
+    router.push(`/mainApp?workspaceId=${workspaceId}`);
   };
 
   
@@ -180,9 +200,110 @@ const WorkspacePage = () => {
     }
   }, [newName]);
 
-  if (selectedWorkspaceId) {
+  /*if (selectedWorkspaceId) {
     return <MainApp workspaceId={selectedWorkspaceId} />;
+  }*/
+
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const handleCreateInvite = async (workspaceId: string) => {
+    if (username) {
+      const workspaceRef = doc(
+        db,
+        "users",
+        username,
+        "workspaces",
+        workspaceId
+      );
+      try {
+        const newInviteCode = uuidv4();
+        setInviteCode(newInviteCode);
+        const inviteData = {
+          code: newInviteCode,
+          createdAt: new Date().toISOString(),
+        };
+        await updateDoc(workspaceRef, {
+          invites: arrayUnion(inviteData),
+        });
+        console.log("Invite code generated:", newInviteCode);
+        // Display the invite code to the user
+      } catch (error) {
+        console.error("Error creating invite:", error);
+      }
+    }
   }
+  const handleJoinWorkspace = async (inviteCode: string) => {
+    if (username) {
+      const usersRef = collection(db, "users"); // Reference to users collection
+
+      // Get all user documents
+      const querySnapshot = await getDocs(usersRef);
+
+      querySnapshot.forEach(async (userDoc) => {
+
+          // Access the workspaces subcollection within the user document
+          const workspacesRef = collection(userDoc.ref, "workspaces");
+
+          // Get all workspaces for the user
+          const workspaceQuerySnapshot = await getDocs(workspacesRef);
+
+          workspaceQuerySnapshot.forEach(async (workspaceDoc) => {
+            
+              const workspaceData = workspaceDoc.data() as Workspace;
+              console.log("Checking workspace:", workspaceData.id); // Log workspace ID
+
+              // Check if "invites" property exists before accessing it
+              if (workspaceData.invites) {
+                const matchingInvite = workspaceData.invites.find(
+                  (invite) => invite.code === inviteCode
+                );
+                console.log(inviteCode);
+
+                if (matchingInvite) {
+                  const workspaceRef = doc(
+                    db,
+                    "users",
+                    userDoc.id,
+                    "workspaces",
+                    workspaceData.id
+                  );
+                  try {
+                    await updateDoc(workspaceRef, {
+                      members: arrayUnion(username), // Add user to workspace members
+                      invites: arrayRemove({ code: inviteCode }), // Remove used invite code
+                    });
+                    setWorkspaces((prevWorkspaces) =>
+                      prevWorkspaces.map((ws) =>
+                        ws.id === workspaceData.id ? workspaceData : ws
+                      )
+                    );
+                    console.log("Joined workspace successfully!");
+                  } catch (error) {
+                    console.error("Error joining workspace:", error);
+                  }
+                } else {
+                  console.log(
+                    "Invite code not found for workspace:",
+                    workspaceData.id
+                  );
+                }
+              } else {
+                console.log(
+                  "Workspace",
+                  workspaceDoc.id,
+                  "has no invites property"
+                );
+              }
+            
+          });
+        
+      });
+    }
+  };
+  
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const togglePopup = () => {
+    setIsPopupOpen(!isPopupOpen);
+  };
 
 
   return (
@@ -258,6 +379,16 @@ const WorkspacePage = () => {
                     >
                       Rename
                     </button>
+                    <button
+                      onClick={() => {
+                        handleCreateInvite(workspace.id);
+                        togglePopup();
+                      }}
+                      className="block w-full rounded-xl text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      role="menuitem"
+                    >
+                      Invite User
+                    </button>
                   </div>
                 </div>,
                 document.body
@@ -298,13 +429,55 @@ const WorkspacePage = () => {
               >
                 Create Workspace
               </button>
+              <button
+                onClick={() => handleJoinWorkspace(newWorkspaceName)}
+                className="px-4 py-2 bg-green-500 text-white rounded-xl w-full mt-2"
+              >
+                Join Workspace
+              </button>
             </div>
           ) : (
             <p className="text-4xl">+</p>
           )}
         </div>
       </div>
+      <div>
+        {isPopupOpen && (
+          <div
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+            onClick={togglePopup}
+          >
+            <div
+              className="bg-white rounded-2xl p-2 shadow flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between space-x-40 items-center font-bold text-lg mb-2">
+                <p className="flex-grow p-0.5 pl-2 ml-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  Invite new user
+                </p>
+                <button
+                  className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-100"
+                  onClick={togglePopup}
+                >
+                  ✖
+                </button>
+              </div>
+              <div className="flex flex-col items-center space-y-4">
+                <p className="font-bold text-lg">Your invite code</p>
+                <p className="font-bold text-sm">{inviteCode}</p>
+                <button
+                  className="m-1 p-2 bg-green-300 hover:bg-green-500 text-white rounded-lg"
+                  onClick={() =>
+                    navigator.clipboard.writeText(inviteCode ?? "")
+                  }
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
-export default WorkspacePage;

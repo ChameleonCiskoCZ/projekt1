@@ -21,8 +21,8 @@ export default function Home() {
             </li>
           </ul>
         </nav>
-        <h1 className="text-4xl font-bold mb-4">Welcome to our website!</h1>
-        <p className="text-lg">Some information about the website...</p>
+        <h1 className="text-4xl font-bold mb-4">Lorem ipsum</h1>
+        <p className="text-lg">Lorem ipsum</p>
       </div>
     </div>
   );
