@@ -1,6 +1,14 @@
+"use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/login");
+  }, [router]);
   return (
     <div className="flex min-h-screen bg-white">
       <div className="container mx-auto px-4">
