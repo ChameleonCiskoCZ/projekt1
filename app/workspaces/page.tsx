@@ -1,7 +1,7 @@
 // WorkspacePage.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot } from "firebase/firestore"; // adjust the path according to your directory structure
+import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot, getDoc } from "firebase/firestore"; // adjust the path according to your directory structure
 import { useAuth } from "../_hooks/useAuth";
 import firebase_app from "@/firebase";
 //import { MainApp } from "../mainApp/page";
@@ -38,22 +38,51 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if(username){
-      const unsubscribe = onSnapshot(
+      const unsubscribeOwned = onSnapshot(
         collection(db, "users", username, "workspaces"),
         (querySnapshot) => {
           const workspaceList = querySnapshot.docs.map((doc) => ({
             id: doc.id,
-
             name: doc.data().name,
-
             invites: doc.data().invites,
           }));
           setWorkspaces(workspaceList);
         }
       );
 
+      // Fetch workspaces where the user is a member
+      const unsubscribeMemberships = onSnapshot(
+        collection(db, "users", username, "memberships"),
+        async (querySnapshot) => {
+          const membershipWorkspaceList = await Promise.all(
+            querySnapshot.docs.map(async (membershipDoc) => {
+              const workspaceRef = doc(
+                db,
+                "users",
+                membershipDoc.data().user,
+                "workspaces",
+                membershipDoc.data().workspace
+              );
+              const workspaceDoc = await getDoc(workspaceRef);
+              return {
+                id: workspaceDoc.id,
+                name: workspaceDoc.data()?.name,
+                invites: workspaceDoc.data()?.invites,
+              };
+            })
+          );
+          setWorkspaces((prevWorkspaces) => [
+            ...prevWorkspaces,
+            ...membershipWorkspaceList,
+          ]);
+        }
+      );
+
       // Unsubscribe on component unmount to avoid memory leaks
-      return () => unsubscribe();
+      return () => {
+        unsubscribeOwned();
+        unsubscribeMemberships();
+      };
     }
   }, [db, username]);
 
@@ -270,6 +299,16 @@ export default function WorkspacePage() {
                     await updateDoc(workspaceRef, {
                       members: arrayUnion(username), // Add user to workspace members
                       invites: arrayRemove({ code: inviteCode }), // Remove used invite code
+                    });
+                    const membershipsRef = collection(
+                      db,
+                      "users",
+                      username,
+                      "memberships"
+                    );
+                    await addDoc(membershipsRef, {
+                      user: userDoc.id,
+                      workspace: workspaceData.id,
                     });
                     setWorkspaces((prevWorkspaces) =>
                       prevWorkspaces.map((ws) =>
