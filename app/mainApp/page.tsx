@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, onSnapshot } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { Tiles } from "./_components/tiles/tiles";
 import { useHandleDrag } from "./_hooks/useHandleDrag";
@@ -9,6 +9,7 @@ import { CardModal } from "./_components/cards/cardModal";
 import { useRemoveCard } from "./_hooks/cards/useRemoveCard";
 import { useAuth } from "../_hooks/useAuth";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -33,46 +34,57 @@ export default function MainApp() {
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
   const searchParams = useSearchParams();
-  const workspaceId = searchParams.get('workspaceId');
+  //const workspaceId = searchParams.get('workspaceId');
+  const workspaceId = sessionStorage.getItem("workspaceId");
+  const ownerUsername = sessionStorage.getItem("ownerUsername");
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const username = useAuth();
+  
 
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
     const fetchTiles = async () => {
-      if (username && workspaceId) {
+      if (ownerUsername && workspaceId) {
         // Fetch the user's document from the users collection
         const tileCollection = collection(
           db,
           "users",
-          username,
+          ownerUsername,
           "workspaces",
           workspaceId,
           "tiles"
         );
 
-        const tileSnapshot = await getDocs(tileCollection);
-        const tiles = await Promise.all(
-          tileSnapshot.docs.map(async (doc) => {
-            const tileData = doc.data();
-            const cardCollection = collection(tileCollection, doc.id, "cards");
-            const cardSnapshot = await getDocs(cardCollection);
-            const cards = cardSnapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() } as Card)
-            );
-            return { id: doc.id, ...tileData, cards } as Tile;
-          })
-        );
-        setTiles(tiles);
+        // Set up a listener for data changes
+        const unsubscribe = onSnapshot(tileCollection, async (tileSnapshot) => {
+          const tiles = await Promise.all(
+            tileSnapshot.docs.map(async (doc) => {
+              const tileData = doc.data();
+              const cardCollection = collection(
+                tileCollection,
+                doc.id,
+                "cards"
+              );
+              const cardSnapshot = await getDocs(cardCollection);
+              const cards = cardSnapshot.docs.map(
+                (doc) => ({ id: doc.id, ...doc.data() } as Card)
+              );
+              return { id: doc.id, ...tileData, cards } as Tile;
+            })
+          );
+          setTiles(tiles);
+        });
+
+        // Return the unsubscribe function to clean up the listener on component unmount
+        return unsubscribe;
       }
     };
 
     fetchTiles();
-  }, [username]);
+  }, [ownerUsername, workspaceId, db]);
 
   const { removedCardIds, setRemovedCardIds, handleRemoveCard } =
     useRemoveCard(setTiles);
@@ -85,7 +97,7 @@ export default function MainApp() {
 
   //save in firebase
   const { isSaving, hasSavedOnce, handleSave } = useSave(
-    username || "",
+    ownerUsername || "",
     db,
     tiles,
     removedTileIds,

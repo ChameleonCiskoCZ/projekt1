@@ -3,7 +3,7 @@ import { Tile } from "../page"; // adjust the path according to your directory s
 import { writeBatch, collection, doc, getDoc } from "firebase/firestore"; // adjust the path according to your directory structure
 
 export const useSave = (
-  username: string,
+  ownerUsername: string,
   db: any,
   tiles: Tile[],
   removedTileIds: Set<string>,
@@ -19,11 +19,11 @@ export const useSave = (
   const handleSave = async () => {
     setIsSaving(true);
     const batch = writeBatch(db);
-    if (username) {
+    if (ownerUsername) {
       const tileCollection = collection(
         db,
         "users",
-        username,
+        ownerUsername,
         "workspaces",
         workspaceId,
         "tiles"
@@ -82,7 +82,7 @@ export const useSave = (
         const tileRef = doc(
           db,
           "users",
-          username,
+          ownerUsername,
           "workspaces",
           workspaceId,
           "tiles",

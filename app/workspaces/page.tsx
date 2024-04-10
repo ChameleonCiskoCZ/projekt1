@@ -1,7 +1,7 @@
 // WorkspacePage.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot, getDoc } from "firebase/firestore"; // adjust the path according to your directory structure
+import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot, getDoc, Query, DocumentData, query, where } from "firebase/firestore"; // adjust the path according to your directory structure
 import { useAuth } from "../_hooks/useAuth";
 import firebase_app from "@/firebase";
 //import { MainApp } from "../mainApp/page";
@@ -12,13 +12,14 @@ import { useRouter } from "next/navigation";
 type Workspace = {
   id: string;
   name: string;
+  owner: string;
   invites: {
     code: string;
     createdAt: string;
     usedBy?: string;
   }[];
   members?: string[]; // Optional: List of usernames with access
-}
+};
 
 
 export default function WorkspacePage() {
@@ -44,6 +45,7 @@ export default function WorkspacePage() {
           const workspaceList = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             name: doc.data().name,
+            owner: doc.data().owner,
             invites: doc.data().invites,
           }));
           setWorkspaces(workspaceList);
@@ -67,6 +69,7 @@ export default function WorkspacePage() {
               return {
                 id: workspaceDoc.id,
                 name: workspaceDoc.data()?.name,
+                owner: workspaceDoc.data()?.owner,
                 invites: workspaceDoc.data()?.invites,
               };
             })
@@ -115,19 +118,33 @@ export default function WorkspacePage() {
         id: newWorkspaceRef.id,
         name: newWorkspaceName,
         invites: [], // Add the 'invites' property with an empty array
+        owner: username,
       });
       setWorkspaces([
         ...workspaces,
-        { id: newWorkspaceRef.id, name: newWorkspaceName, invites: [] }, // Include the 'invites' property in the new workspace object
+        {
+          id: newWorkspaceRef.id,
+          name: newWorkspaceName,
+          invites: [],
+          owner: username,
+        }, // Include the 'invites' property in the new workspace object
       ]);
       setNewWorkspaceName("");
       setIsClicked(false);
     }
   };
 
-  const handleWorkspaceSelect = (workspaceId: string) => {
+  const handleWorkspaceSelect = (workspace: Workspace) => {
+    sessionStorage.setItem("ownerUsername", workspace.owner);
+    sessionStorage.setItem("workspaceId", workspace.id);
+    router.push("/mainApp");
     //setSelectedWorkspaceId(workspaceId);
-    router.push(`/mainApp?workspaceId=${workspaceId}`);
+    //router.push(`/mainApp?workspaceId=${workspace.id}&ownerUsername=${workspace.owner}`);
+    /*router.push(JSON.stringify({
+      pathname: "/mainApp",
+      query: { workspaceId: workspace.id },
+      state: { ownerUsername: workspace.owner },
+    }));*/
   };
 
   
@@ -168,10 +185,33 @@ export default function WorkspacePage() {
 
   // handle removing workspaces
   const handleRemoveWorkspace = async (id: string) => {
-    if (username) {const workspaceRef = doc(db, "users", username, "workspaces", id);
+    if (username) {
+      const workspaceRef = doc(db, "users", username, "workspaces", id);
+      const workspaceDoc = await getDoc(workspaceRef);
+      const members = workspaceDoc.data()?.members;
+
+      if (members) {
+        for (const member of members) {
+          const membershipsCollection = collection(
+            db,
+            "users",
+            member,
+            "memberships"
+          );
+          const membershipQuery: Query<DocumentData> = query(
+            membershipsCollection,
+            where("workspace", "==", id)
+          );
+          const querySnapshot = await getDocs(membershipQuery);
+
+          querySnapshot.forEach((doc) => {
+            deleteDoc(doc.ref);
+          });
+        }
+      }
+
       await deleteDoc(workspaceRef);
     }
-    
   };
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(
     null
@@ -352,7 +392,7 @@ export default function WorkspacePage() {
         {workspaces.map((workspace) => (
           <div
             key={workspace.id}
-            onClick={() => handleWorkspaceSelect(workspace.id)}
+            onClick={() => handleWorkspaceSelect(workspace)}
             className="p-2 bg-white hover:bg-sky-50 min-h-20 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
           >
             <div className="flex justify-between items-center">
