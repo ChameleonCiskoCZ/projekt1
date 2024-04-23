@@ -8,6 +8,7 @@ import firebase_app from "@/firebase";
 import ReactDOM from "react-dom";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
+import "@fortawesome/fontawesome-free/css/all.css";
 
 type Workspace = {
   id: string;
@@ -25,13 +26,7 @@ type Workspace = {
 export default function WorkspacePage() {
   const db = getFirestore(firebase_app);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  /*const [workspaces, setWorkspaces] = useState<
-    { id: string; [key: string]: any }[]
-  >([]);*/
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
-    null
-  );
   const username = useAuth();
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const [isClicked, setIsClicked] = useState(false);
@@ -137,7 +132,8 @@ export default function WorkspacePage() {
   const handleWorkspaceSelect = (workspace: Workspace) => {
     sessionStorage.setItem("ownerUsername", workspace.owner);
     sessionStorage.setItem("workspaceId", workspace.id);
-    router.push("/mainApp");
+    //router.push("/mainApp");
+    router.push(`/mainApp?workspaceId=${workspace.id}`);
     //setSelectedWorkspaceId(workspaceId);
     //router.push(`/mainApp?workspaceId=${workspace.id}&ownerUsername=${workspace.owner}`);
     /*router.push(JSON.stringify({
@@ -274,14 +270,14 @@ export default function WorkspacePage() {
   }*/
 
   const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const handleCreateInvite = async (workspaceId: string) => {
+  const handleCreateInvite = async (workspace: Workspace) => {
     if (username) {
       const workspaceRef = doc(
         db,
         "users",
-        username,
+        workspace.owner,
         "workspaces",
-        workspaceId
+        workspace.id
       );
       try {
         const newInviteCode = uuidv4();
@@ -328,36 +324,42 @@ export default function WorkspacePage() {
                 console.log(inviteCode);
 
                 if (matchingInvite) {
-                  const workspaceRef = doc(
-                    db,
-                    "users",
-                    userDoc.id,
-                    "workspaces",
-                    workspaceData.id
-                  );
-                  try {
-                    await updateDoc(workspaceRef, {
-                      members: arrayUnion(username), // Add user to workspace members
-                      invites: arrayRemove({ code: inviteCode }), // Remove used invite code
-                    });
-                    const membershipsRef = collection(
+                  if (username !== workspaceData.owner) {
+                    const workspaceRef = doc(
                       db,
                       "users",
-                      username,
-                      "memberships"
+                      userDoc.id,
+                      "workspaces",
+                      workspaceData.id
                     );
-                    await addDoc(membershipsRef, {
-                      user: userDoc.id,
-                      workspace: workspaceData.id,
-                    });
-                    setWorkspaces((prevWorkspaces) =>
-                      prevWorkspaces.map((ws) =>
-                        ws.id === workspaceData.id ? workspaceData : ws
-                      )
+                    try {
+                      await updateDoc(workspaceRef, {
+                        members: arrayUnion(username), // Add user to workspace members
+                        invites: arrayRemove({ code: inviteCode }), // Remove used invite code
+                      });
+                      const membershipsRef = collection(
+                        db,
+                        "users",
+                        username,
+                        "memberships"
+                      );
+                      await addDoc(membershipsRef, {
+                        user: userDoc.id,
+                        workspace: workspaceData.id,
+                      });
+                      setWorkspaces((prevWorkspaces) =>
+                        prevWorkspaces.map((ws) =>
+                          ws.id === workspaceData.id ? workspaceData : ws
+                        )
+                      );
+                      console.log("Joined workspace successfully!");
+                    } catch (error) {
+                      console.error("Error joining workspace:", error);
+                    }
+                  } else {
+                    console.log(
+                      "Owner cannot be invited to their own workspace."
                     );
-                    console.log("Joined workspace successfully!");
-                  } catch (error) {
-                    console.error("Error joining workspace:", error);
                   }
                 } else {
                   console.log(
@@ -393,7 +395,7 @@ export default function WorkspacePage() {
           <div
             key={workspace.id}
             onClick={() => handleWorkspaceSelect(workspace)}
-            className="p-2 bg-white hover:bg-sky-50 min-h-20 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
+            className="p-2 bg-white min-h-20 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
           >
             <div className="flex justify-between items-center">
               {editingWorkspaceId === workspace.id ? (
@@ -409,18 +411,27 @@ export default function WorkspacePage() {
                   className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500 block"
                 />
               ) : (
-                <div className="text-xl resize-none w-full p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow cursor-pointer block">
-                  <h2>{workspace.name}</h2>
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-xl resize-none p-0.5 pl-2 font-bold overflow-hidden break-words rounded-xl flex-grow cursor-pointer block">
+                    <h2>{workspace.name}</h2>
+                  </div>
+                  {workspace.owner !== username && (
+                    <div className="relative mr-2 group">
+                      <i className="fas fa-user" />
+                      <div className="absolute left-0 bg-white text-sm rounded-xl py-2 px-3 shadow-md opacity-0 group-hover:opacity-100 z-10 min-w-32">
+                        Owner: {workspace.owner}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <button
                 ref={buttonRef2}
                 onClick={(event) => handleButtonClick(workspace.id, event)}
-                className="text-xl p-2.5 rounded-xl hover:bg-gray-100"
+                onMouseEnter={(event) => event.stopPropagation()}
+                className="flex items-center justify-center text-xl p-2 rounded-xl hover:bg-gray-100"
               >
-                <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
-                <span className="w-4 h-0.5 bg-black block mb-1 rounded-full"></span>
-                <span className="w-4 h-0.5 bg-black block rounded-full"></span>
+                <i className="fas fa-bars"></i>
               </button>
             </div>
             {openWorkspaceId === workspace.id &&
@@ -460,7 +471,7 @@ export default function WorkspacePage() {
                     </button>
                     <button
                       onClick={() => {
-                        handleCreateInvite(workspace.id);
+                        handleCreateInvite(workspace);
                         togglePopup();
                       }}
                       className="block w-full rounded-xl text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

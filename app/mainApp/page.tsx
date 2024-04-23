@@ -34,8 +34,8 @@ export default function MainApp() {
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
   const searchParams = useSearchParams();
-  //const workspaceId = searchParams.get('workspaceId');
-  const workspaceId = sessionStorage.getItem("workspaceId");
+  const workspaceId = searchParams.get('workspaceId');
+  //const workspaceId = sessionStorage.getItem("workspaceId");
   const ownerUsername = sessionStorage.getItem("ownerUsername");
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
