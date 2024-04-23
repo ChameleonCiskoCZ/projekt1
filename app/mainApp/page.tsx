@@ -10,6 +10,7 @@ import { useRemoveCard } from "./_hooks/cards/useRemoveCard";
 import { useAuth } from "../_hooks/useAuth";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import Settings from "./_components/settings/settings";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -135,6 +136,7 @@ export default function MainApp() {
           </div>
         )}
       </div>
+      <Settings workspaceId={workspaceId||""} ownerUsername={ownerUsername || ""} />
 
       <Tiles
         tiles={tiles}

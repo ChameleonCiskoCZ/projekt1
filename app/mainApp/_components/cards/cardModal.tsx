@@ -51,7 +51,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                 }}
               />
               <button
-                className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-100"
+                className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-xl hover:bg-red-100"
                 onClick={() => setIsModalOpen(false)}
               >
                 ✖
@@ -82,7 +82,7 @@ export const CardModal: React.FC<CardModalProps> = ({
               </div>
               <div className="mt-10">
                 <button
-                  className="m-1 p-2 bg-red-300 hover:bg-red-500 text-white rounded-lg"
+                  className="m-1 p-2 bg-red-300 hover:bg-red-500 text-white rounded-xl"
                   onClick={() => {
                     // Add your remove logic here
                     handleRemoveCard(selectedTile.id, selectedCard.id);

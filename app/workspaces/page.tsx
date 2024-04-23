@@ -1,7 +1,24 @@
 // WorkspacePage.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, onSnapshot, getDoc, Query, DocumentData, query, where } from "firebase/firestore"; // adjust the path according to your directory structure
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getFirestore,
+  doc,
+  deleteDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  setDoc,
+  onSnapshot,
+  getDoc,
+  Query,
+  DocumentData,
+  query,
+  where,
+} from "firebase/firestore"; // adjust the path according to your directory structure
 import { useAuth } from "../_hooks/useAuth";
 import firebase_app from "@/firebase";
 //import { MainApp } from "../mainApp/page";
@@ -22,7 +39,6 @@ type Workspace = {
   members?: string[]; // Optional: List of usernames with access
 };
 
-
 export default function WorkspacePage() {
   const db = getFirestore(firebase_app);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -33,7 +49,7 @@ export default function WorkspacePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if(username){
+    if (username) {
       const unsubscribeOwned = onSnapshot(
         collection(db, "users", username, "workspaces"),
         (querySnapshot) => {
@@ -142,8 +158,6 @@ export default function WorkspacePage() {
       state: { ownerUsername: workspace.owner },
     }));*/
   };
-
-  
 
   const [openWorkspaceId, setOpenWorkspaceId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -295,7 +309,7 @@ export default function WorkspacePage() {
         console.error("Error creating invite:", error);
       }
     }
-  }
+  };
   const handleJoinWorkspace = async (inviteCode: string) => {
     if (username) {
       const usersRef = collection(db, "users"); // Reference to users collection
@@ -304,88 +318,93 @@ export default function WorkspacePage() {
       const querySnapshot = await getDocs(usersRef);
 
       querySnapshot.forEach(async (userDoc) => {
+        // Access the workspaces subcollection within the user document
+        const workspacesRef = collection(userDoc.ref, "workspaces");
 
-          // Access the workspaces subcollection within the user document
-          const workspacesRef = collection(userDoc.ref, "workspaces");
+        // Get all workspaces for the user
+        const workspaceQuerySnapshot = await getDocs(workspacesRef);
 
-          // Get all workspaces for the user
-          const workspaceQuerySnapshot = await getDocs(workspacesRef);
+        workspaceQuerySnapshot.forEach(async (workspaceDoc) => {
+          const workspaceData = workspaceDoc.data() as Workspace;
+          console.log("Checking workspace:", workspaceData.id); // Log workspace ID
 
-          workspaceQuerySnapshot.forEach(async (workspaceDoc) => {
-            
-              const workspaceData = workspaceDoc.data() as Workspace;
-              console.log("Checking workspace:", workspaceData.id); // Log workspace ID
+          // Check if "invites" property exists before accessing it
+          if (workspaceData.invites) {
+            const matchingInvite = workspaceData.invites.find(
+              (invite) => invite.code === inviteCode
+            );
+            console.log(inviteCode);
 
-              // Check if "invites" property exists before accessing it
-              if (workspaceData.invites) {
-                const matchingInvite = workspaceData.invites.find(
-                  (invite) => invite.code === inviteCode
+            if (matchingInvite) {
+              if (username !== workspaceData.owner) {
+                const workspaceRef = doc(
+                  db,
+                  "users",
+                  userDoc.id,
+                  "workspaces",
+                  workspaceData.id
                 );
-                console.log(inviteCode);
-
-                if (matchingInvite) {
-                  if (username !== workspaceData.owner) {
-                    const workspaceRef = doc(
-                      db,
-                      "users",
-                      userDoc.id,
-                      "workspaces",
-                      workspaceData.id
-                    );
-                    try {
-                      await updateDoc(workspaceRef, {
-                        members: arrayUnion(username), // Add user to workspace members
-                        invites: arrayRemove({ code: inviteCode }), // Remove used invite code
-                      });
-                      const membershipsRef = collection(
-                        db,
-                        "users",
-                        username,
-                        "memberships"
-                      );
-                      await addDoc(membershipsRef, {
-                        user: userDoc.id,
-                        workspace: workspaceData.id,
-                      });
-                      setWorkspaces((prevWorkspaces) =>
-                        prevWorkspaces.map((ws) =>
-                          ws.id === workspaceData.id ? workspaceData : ws
-                        )
-                      );
-                      console.log("Joined workspace successfully!");
-                    } catch (error) {
-                      console.error("Error joining workspace:", error);
-                    }
-                  } else {
-                    console.log(
-                      "Owner cannot be invited to their own workspace."
-                    );
-                  }
-                } else {
-                  console.log(
-                    "Invite code not found for workspace:",
-                    workspaceData.id
+                try {
+                  await updateDoc(workspaceRef, {
+                    //members: arrayUnion(username), // Add user to workspace members
+                    invites: arrayRemove({ code: inviteCode }), // Remove used invite code
+                  });
+                  // Save member in new collection
+                  const memberDocRef = doc(
+                    db,
+                    "users",
+                    userDoc.id,
+                    "workspaces",
+                    workspaceData.id,
+                    "members",
+                    username
                   );
+                  await setDoc(memberDocRef, { username });
+
+                  const membershipsRef = collection(
+                    db,
+                    "users",
+                    username,
+                    "memberships"
+                  );
+                  await addDoc(membershipsRef, {
+                    user: userDoc.id,
+                    workspace: workspaceData.id,
+                  });
+                  setWorkspaces((prevWorkspaces) =>
+                    prevWorkspaces.map((ws) =>
+                      ws.id === workspaceData.id ? workspaceData : ws
+                    )
+                  );
+                  console.log("Joined workspace successfully!");
+                } catch (error) {
+                  console.error("Error joining workspace:", error);
                 }
               } else {
-                console.log(
-                  "Workspace",
-                  workspaceDoc.id,
-                  "has no invites property"
-                );
+                console.log("Owner cannot be invited to their own workspace.");
               }
-            
-          });
-        
+            } else {
+              console.log(
+                "Invite code not found for workspace:",
+                workspaceData.id
+              );
+            }
+          } else {
+            console.log(
+              "Workspace",
+              workspaceDoc.id,
+              "has no invites property"
+            );
+          }
+        });
       });
     }
   };
-  
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
   };
-
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -570,4 +589,4 @@ export default function WorkspacePage() {
       </div>
     </div>
   );
-};
+}
