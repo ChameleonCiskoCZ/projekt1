@@ -4,7 +4,7 @@ import { AddTile } from "./addTile";
 import { Cards } from "../cards/cards";
 import { AddCard } from "../cards/addCard";
 import { TileMenu } from "./tileMenu";
-import { Tile } from "../../page";
+import { Role, Tile } from "../../page";
 import { Card } from "../../page";
 import { useAddTile } from "../../_hooks/tiles/useAddTile";
 import { useTileMenu } from "../../_hooks/tiles/useTileMenu";
@@ -21,6 +21,7 @@ interface TilesProps {
   setSelectedTile: React.Dispatch<React.SetStateAction<Tile | null>>;
   setSelectedCard: React.Dispatch<React.SetStateAction<Card | null>>;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  userRole: Role | null;
 }
 
 export const Tiles: React.FC<TilesProps> = ({
@@ -32,6 +33,7 @@ export const Tiles: React.FC<TilesProps> = ({
   setSelectedTile,
   setSelectedCard,
   setIsModalOpen,
+  userRole,
 }) => {
   const tileRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +51,8 @@ export const Tiles: React.FC<TilesProps> = ({
   const { name, setName, isClicked, setIsClicked, handleAddTile } = useAddTile(
     tiles,
     setTiles,
-    tileRef
+    tileRef,
+    userRole,
   );
 
   //hook for tile menu
@@ -60,7 +63,7 @@ export const Tiles: React.FC<TilesProps> = ({
     menuPosition,
     handleButtonClick,
     handleRemoveTile,
-  } = useTileMenu(tiles, setTiles, removedTileIds, setRemovedTileIds);
+  } = useTileMenu(tiles, setTiles, removedTileIds, setRemovedTileIds, userRole);
 
   //hook for adding cards
   const {
@@ -70,7 +73,7 @@ export const Tiles: React.FC<TilesProps> = ({
     expandedTileId,
     handleAddCardClick,
     handleAddCard,
-  } = useAddCard(tiles, setTiles);
+  } = useAddCard(tiles, setTiles, userRole);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>

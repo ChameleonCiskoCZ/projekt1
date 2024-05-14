@@ -1,16 +1,22 @@
-import { useState } from "react";
-import { Tile } from "../page";
+import { useContext, useState } from "react";
+import { Role, Tile } from "../page";
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 export const useHandleDrag = (
   tiles: Tile[],
-  setTiles: (tiles: Tile[]) => void
+  setTiles: (tiles: Tile[]) => void,
+  userRole: Role | null
 ) => {
   const [isDragging, setIsDragging] = useState(false);
   const [movedCards, setMovedCards] = useState<{ [key: string]: string }>({});;
+  const { notify } = useContext(NotificationContext);
+  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const username = useAuth();
 
   const handleDragEnd = (result: any) => {
     setIsDragging(true);
-    const { source, destination, draggableId, type } = result;
+    const { source, destination, type } = result;
 
     // Ignore drops outside of a droppable area
     if (!destination) {
@@ -19,6 +25,14 @@ export const useHandleDrag = (
     }
 
     if (type === "tile") {
+      if (username !== ownerUsername) {
+        if (!userRole?.moveTile) {
+          console.log("You do not have permission to move tiles.");
+          notify("You do not have permission to move tiles.", "error");
+          setIsDragging(false);
+          return;
+        }
+      }
       // Handle tile reordering
       const newTiles = Array.from(tiles);
       const [removed] = newTiles.splice(source.index, 1);
@@ -31,6 +45,14 @@ export const useHandleDrag = (
 
       setTiles(newTiles);
     } else {
+      if (username !== ownerUsername) {
+        if (!userRole?.moveCard) {
+          console.log("You do not have permission to move cards.");
+          notify("You do not have permission to move cards.", "error");
+          setIsDragging(false);
+          return;
+        }
+      }
       // Handle card reordering
       const startTileId = source.droppableId.split("-")[1];
       const endTileId = destination.droppableId.split("-")[1];

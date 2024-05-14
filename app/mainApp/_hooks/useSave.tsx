@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Tile } from "../page"; // adjust the path according to your directory structure
 import { writeBatch, collection, doc, getDoc } from "firebase/firestore"; // adjust the path according to your directory structure
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
 
 export const useSave = (
   ownerUsername: string,
@@ -13,11 +14,10 @@ export const useSave = (
   setRemovedCardIds: React.Dispatch<React.SetStateAction<any>>,
   workspaceId: string
 ) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasSavedOnce, setHasSavedOnce] = useState(false);
+  const { notify } = useContext(NotificationContext);
 
   const handleSave = async () => {
-    setIsSaving(true);
+    notify("Saving...", "success");
     const batch = writeBatch(db);
     if (ownerUsername) {
       const tileCollection = collection(
@@ -94,10 +94,9 @@ export const useSave = (
       await batch.commit();
       setRemovedTileIds(new Set());
       setRemovedCardIds({});
-      setIsSaving(false);
-      setHasSavedOnce(true);
+      notify("Saved successfully!", "success");
     }
   };
 
-  return { isSaving, hasSavedOnce, handleSave };
+  return { handleSave };
 };

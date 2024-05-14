@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirestore, collection, getDocs, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, getDocs, onSnapshot, doc, getDoc } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { Tiles } from "./_components/tiles/tiles";
 import { useHandleDrag } from "./_hooks/useHandleDrag";
@@ -18,6 +18,7 @@ export type Card = {
   name: string;
   position: number;
   description: string;
+  assignedTo: string;
 };
 
 export type Tile = {
@@ -26,8 +27,15 @@ export type Tile = {
   position: number;
   cards: Card[];
 };
-interface MainAppProps {
-  workspaceId: string;
+
+export interface Role {
+  name: string;
+  changePermissions: boolean;
+  addRemoveRole: boolean;
+  moveCard: boolean;
+  addRemoveCard: boolean;
+  moveTile: boolean;
+  addRemoveTile: boolean;
 }
 
 export default function MainApp() {
@@ -43,6 +51,9 @@ export default function MainApp() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const username = useAuth();
+  const [userRole, setUserRole] = useState<Role | null>(null);
+
+
   
 
   // Fetch tiles from Firebase on initial render
@@ -87,17 +98,77 @@ export default function MainApp() {
     fetchTiles();
   }, [ownerUsername, workspaceId, db]);
 
+   useEffect(() => {
+     const fetchUserRole = () => {
+       if (ownerUsername && workspaceId && username) {
+         const memberRef = doc(
+           db,
+           "users",
+           ownerUsername,
+           "workspaces",
+           workspaceId,
+           "members",
+           username
+         );
+         const unsubscribeFromMember = onSnapshot(
+           memberRef,
+           (memberSnapshot) => {
+             const memberData = memberSnapshot.data();
+             if (memberData) {
+               const role = memberData.role;
+
+               // Fetch data from workspaceId, "roles", userRole
+               const roleRef = doc(
+                 db,
+                 "users",
+                 ownerUsername,
+                 "workspaces",
+                 workspaceId,
+                 "roles",
+                 role
+               );
+               const unsubscribeFromRole = onSnapshot(
+                 roleRef,
+                 (roleSnapshot) => {
+                   const roleData = roleSnapshot.data();
+                   setUserRole(roleData as Role);
+                 }
+               );
+
+               // Return cleanup function for role snapshot
+               return () => unsubscribeFromRole();
+             }
+           }
+         );
+
+         // Return cleanup function for member snapshot
+         return () => unsubscribeFromMember();
+       }
+     };
+
+     // Call fetchUserRole and store cleanup function
+     const unsubscribe = fetchUserRole();
+
+     // Cleanup function for useEffect
+     return () => {
+       if (unsubscribe) {
+         unsubscribe();
+       }
+     };
+   }, [db, ownerUsername, workspaceId, username]);
+
   const { removedCardIds, setRemovedCardIds, handleRemoveCard } =
-    useRemoveCard(setTiles);
+    useRemoveCard(setTiles, userRole);
 
   //handle dragging
   const { handleDragEnd, isDragging, movedCards } = useHandleDrag(
     tiles,
-    setTiles
+    setTiles,
+    userRole
   );
 
   //save in firebase
-  const { isSaving, hasSavedOnce, handleSave } = useSave(
+  const { handleSave } = useSave(
     ownerUsername || "",
     db,
     tiles,
@@ -109,34 +180,17 @@ export default function MainApp() {
     workspaceId || "" // Provide a default value of an empty string
   );
 
-  const [showSaved, setShowSaved] = useState(false);
-
-  //timeout to show saved message
-  useEffect(() => {
-    let timeoutId: any;
-    if (!isSaving && hasSavedOnce) {
-      setShowSaved(true);
-      timeoutId = setTimeout(() => setShowSaved(false), 3000); // 3000ms = 3s
-    }
-    return () => clearTimeout(timeoutId);
-  }, [isSaving, hasSavedOnce]);
+ 
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div>
-        {/* ...rest of your component... */}
-        {isSaving && (
-          <div className="fixed bottom-4 right-4 w-40 z-50 px-20 py-4 bg-gray-300 rounded-2xl flex items-center justify-center">
-            Saving
-          </div>
-        )}
-        {!isSaving && showSaved && (
-          <div className="fixed bottom-4 right-4 w-40 z-50 px-20 py-4 bg-green-300 rounded-2xl flex items-center justify-center">
-            Saved!
-          </div>
-        )}
-      </div>
-      <Settings workspaceId={workspaceId||""} ownerUsername={ownerUsername || ""} />
+      
+        <Settings
+          workspaceId={workspaceId || ""}
+          ownerUsername={ownerUsername || ""}
+          userRole={userRole as Role}
+        />
+      
 
       <Tiles
         tiles={tiles}
@@ -147,6 +201,7 @@ export default function MainApp() {
         setSelectedTile={setSelectedTile}
         setSelectedCard={setSelectedCard}
         setIsModalOpen={setIsModalOpen}
+        userRole={userRole}
       />
 
       <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">

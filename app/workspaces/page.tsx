@@ -1,6 +1,6 @@
 // WorkspacePage.tsx
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import {
   collection,
   addDoc,
@@ -26,6 +26,7 @@ import ReactDOM from "react-dom";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import "@fortawesome/fontawesome-free/css/all.css";
+import { NotificationContext } from "../_hooks/notify/notificationContext";
 
 type Workspace = {
   id: string;
@@ -47,6 +48,7 @@ export default function WorkspacePage() {
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const [isClicked, setIsClicked] = useState(false);
   const router = useRouter();
+  const { notify } = useContext(NotificationContext);
 
   useEffect(() => {
     if (username) {
@@ -199,6 +201,10 @@ export default function WorkspacePage() {
       const workspaceRef = doc(db, "users", username, "workspaces", id);
       const workspaceDoc = await getDoc(workspaceRef);
       const members = workspaceDoc.data()?.members;
+      if (username !== workspaceDoc.data()?.owner) {
+        notify("Only owner can delete this workspace", "error")
+        return;
+      }
 
       if (members) {
         for (const member of members) {

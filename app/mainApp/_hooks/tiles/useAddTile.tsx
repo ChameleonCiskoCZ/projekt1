@@ -1,13 +1,19 @@
-import { useState, useEffect, RefObject } from "react";
-import { Tile } from "../../page";
+import { useState, useEffect, RefObject, useContext } from "react";
+import { Role, Tile } from "../../page";
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 export const useAddTile = (
   tiles: Tile[],
   setTiles: (tiles: Tile[]) => void,
-  tileRef: RefObject<HTMLDivElement>
+  tileRef: RefObject<HTMLDivElement>,
+  userRole: Role | null,
 ) => {
   const [name, setName] = useState("");
   const [isClicked, setIsClicked] = useState(false);
+  const { notify } = useContext(NotificationContext);
+  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const username = useAuth();
   // Add an effect to close the menu when clicking outside tile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -23,6 +29,13 @@ export const useAddTile = (
   }, []);
 
   const handleAddTile = () => {
+    if (username !== ownerUsername) {
+      if (!userRole?.addRemoveTile) {
+        console.log("You do not have permission to add tiles.");
+        notify("You do not have permission to add tiles.", "error");
+        return;
+      }
+    }
     const newPosition = tiles.length;
     const newTile = {
       name,

@@ -91,6 +91,22 @@ export const CardModal: React.FC<CardModalProps> = ({
                 >
                   Remove Card
                 </button>
+                <button
+                  className="m-1 p-2 bg-sky-300 hover:bg-sky-500 text-white rounded-xl"
+                  onClick={handleOpenPopup}
+                >
+                  Assign Card
+                </button>
+
+                {isPopupOpen && (
+                  <div>
+                    {members.map((member) => (
+                      <div onClick={() => handleAssignMember(member.id)}>
+                        {member.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,20 +1,40 @@
-import { useState, useRef, useEffect } from "react";
-import { Tile } from "../../page"; // adjust the path according to your directory structure
+import { useState, useRef, useEffect, useContext } from "react";
+import { Role, Tile } from "../../page"; // adjust the path according to your directory structure
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 export const useAddCard = (
   tiles: Tile[],
-  setTiles: React.Dispatch<React.SetStateAction<Tile[]>>
+  setTiles: React.Dispatch<React.SetStateAction<Tile[]>>,
+  userRole: Role | null,
 ) => {
   const [expandedTileId, setExpandedTileId] = useState<string | null>(null);
   const [newCardName, setNewCardName] = useState("");
   const addCardRef = useRef<HTMLDivElement>(null);
+  const { notify } = useContext(NotificationContext);
+  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const username = useAuth();
 
   const handleAddCardClick = (tileId: string) => {
+    if (username !== ownerUsername) {
+      if (!userRole?.addRemoveCard) {
+        console.log("You do not have permission to add cards.");
+        notify("You do not have permission to add cards.", "error");
+        return;
+      }
+    }
     setExpandedTileId(tileId);
   };
 
   // Add a new card to a tile
   const handleAddCard = (tileId: string) => {
+    if (username !== ownerUsername) {
+      if (!userRole?.addRemoveCard) {
+        console.log("You do not have permission to add cards.");
+        notify("You do not have permission to add cards.", "error");
+        return;
+      }
+    }
     // Find the tile to which the card will be added
     const tile = tiles.find((tile) => tile.id === tileId);
     // Determine the position for the new card
@@ -27,6 +47,7 @@ export const useAddCard = (
         name: newCardName,
         position: newPosition,
         description: "",
+        assignedTo: "",
       };
 
       // Add the card to the tile
