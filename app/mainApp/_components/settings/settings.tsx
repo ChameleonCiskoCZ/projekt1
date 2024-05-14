@@ -14,21 +14,17 @@ import {
 import firebase_app from "@/firebase";
 import Switch from "react-switch";
 import { useAuth } from "@/app/_hooks/useAuth";
-import { Role } from "../../page";
+import { Member, Role } from "../../page";
 import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
 
 interface UserInfo {
   ownerUsername: string;
   workspaceId: string;
   userRole: Role;
+  members: Member[];
 }
 
-interface Member {
-  username: string;
-  role: string;
-}
-
-const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole }) => {
+const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, members }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Roles");
   const [newRoleName, setNewRoleName] = useState("");
@@ -41,33 +37,14 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole }) 
   const [moveTilePermission, setMoveTilePermission] =
     useState(false);
   const [addRemoveTilePermission, setAddRemoveTilePermission] = useState(false);
+  const [assignCardPermission, setAssignCardPermission] = useState(false);
   const db = getFirestore(firebase_app);
-  const [members, setMembers] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const username = useAuth();
   const { notify } = useContext(NotificationContext);
   
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      const membersCollection = collection(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "members"
-      );
-      const membersSnapshot = await getDocs(membersCollection);
-      setMembers(
-        membersSnapshot.docs.map((doc) => ({
-          ...(doc.data() as Member),
-        }))
-      );
-    };
-
-    fetchMembers();
-  }, [db, ownerUsername, workspaceId]);
+ 
 
   const handleSelectMember = (member: Member) => {
     setSelectedMember(member);
@@ -110,6 +87,11 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole }) 
   };
 
   const handleCreateRole = async () => {
+    if (!newRoleName.trim()) {
+      console.log("Role name cannot be empty.");
+      notify("Role name cannot be empty.", "error");
+      return;
+    }
     if (username !== ownerUsername) {
       if (!userRole?.addRemoveRole) {
         console.log("You do not have permission to create roles.");
@@ -314,6 +296,31 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole }) 
     }
   };
 
+  const handleAssignCardPermission = async () => {
+    if (username !== ownerUsername) {
+      if (!userRole?.changePermissions) {
+        console.log("You do not have permission to change permissions.");
+        notify("You do not have permission to change permissions.", "error");
+        return;
+      }
+    }
+    if (selectedRole) {
+      const updatedPermission = !assignCardPermission;
+      setAssignCardPermission(updatedPermission);
+      const roleRef = doc(
+        db,
+        "users",
+        ownerUsername,
+        "workspaces",
+        workspaceId,
+        "roles",
+        selectedRole.name
+      );
+      await updateDoc(roleRef, { assignCard: updatedPermission });
+    }
+  };
+
+
 
   const handleRemoveRole = async (role: Role) => {
     if (username !== ownerUsername) {
@@ -433,86 +440,98 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole }) 
                     <h2 className="text-xl font-bold text-center mb-2 bg-sky-300 p-2 rounded-xl">
                       Permissions
                     </h2>
-                      <div className="flex flex-col items-stretch space-y-2 ">
-                        <h2 className="text-lg font-bold text-start">
-                          Member Settings
-                        </h2>
-                        <div className="flex items-center justify-between space-x-2">
-                          <span>Add/Remove Role</span>
-                          <Switch
-                            onChange={handleToggleAddRemoveRolePermission}
-                            checked={addRemoveCardPermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between space-x-2">
-                          <span>Change permissions</span>
-                          <Switch
-                            onChange={handleToggleChangePermissionsPermission}
-                            checked={addRemoveCardPermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                        <h2 className="text-lg font-bold text-start">Cards</h2>
-                        <div className="flex  items-center justify-between space-x-2">
-                          <span>Move Card</span>
-                          <Switch
-                            onChange={handleToggleMoveCardPermission}
-                            checked={moveCardPermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between space-x-2">
-                          <span>Add/Remove Card</span>
-                          <Switch
-                            onChange={handleToggleAddRemoveCardPermission}
-                            checked={addRemoveCardPermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                        <h2 className="text-lg font-bold text-start">Tiles</h2>
-
-                        <div className="flex items-center justify-between space-x-2">
-                          <span>Move tile</span>
-                          <Switch
-                            onChange={handleToggleMoveTilePermission}
-                            checked={moveTilePermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between space-x-2">
-                          <span>Add/Remove tile</span>
-                          <Switch
-                            onChange={handleToggleAddRemoveTilePermission}
-                            checked={addRemoveTilePermission}
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
+                    <div className="flex flex-col items-stretch space-y-2">
+                      <h2 className="text-lg font-bold text-start">
+                        Member Settings
+                      </h2>
+                      <div className="flex items-center justify-between space-x-2">
+                        <span>Add/Remove Role</span>
+                        <Switch
+                          onChange={handleToggleAddRemoveRolePermission}
+                          checked={addRemoveRolePermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
                       </div>
+                      <div className="flex items-center justify-between space-x-2">
+                        <span>Change permissions</span>
+                        <Switch
+                          onChange={handleToggleChangePermissionsPermission}
+                          checked={changePermissionsPermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                      <h2 className="text-lg font-bold text-start">Cards</h2>
+                      <div className="flex  items-center justify-between space-x-2">
+                        <span>Move Card</span>
+                        <Switch
+                          onChange={handleToggleMoveCardPermission}
+                          checked={moveCardPermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between space-x-2">
+                        <span>Add/Remove Card</span>
+                        <Switch
+                          onChange={handleToggleAddRemoveCardPermission}
+                          checked={addRemoveCardPermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                      <div className="flex  items-center justify-between space-x-2">
+                        <span>Assign Cards</span>
+                        <Switch
+                          onChange={handleAssignCardPermission}
+                          checked={assignCardPermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                      <h2 className="text-lg font-bold text-start">Tiles</h2>
+
+                      <div className="flex items-center justify-between space-x-2">
+                        <span>Move tile</span>
+                        <Switch
+                          onChange={handleToggleMoveTilePermission}
+                          checked={moveTilePermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between space-x-2">
+                        <span>Add/Remove tile</span>
+                        <Switch
+                          onChange={handleToggleAddRemoveTilePermission}
+                          checked={addRemoveTilePermission}
+                          offColor="#767577"
+                          onColor="#81b0ff"
+                          height={20}
+                          width={48}
+                          handleDiameter={16}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

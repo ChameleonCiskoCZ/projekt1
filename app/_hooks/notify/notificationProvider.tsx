@@ -27,7 +27,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   return (
     <NotificationContext.Provider value={{ notify }}>
       {children}
-      <div className="fixed bottom-4 right-4">
+      <div className="fixed bottom-4 right-4 z-50">
         {notifications.map((notification, index) => (
           <div
             key={index}

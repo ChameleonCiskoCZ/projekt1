@@ -18,7 +18,7 @@ export type Card = {
   name: string;
   position: number;
   description: string;
-  assignedTo: string;
+  assignedTo: string[];
 };
 
 export type Tile = {
@@ -28,6 +28,11 @@ export type Tile = {
   cards: Card[];
 };
 
+export interface Member {
+  username: string;
+  role: string;
+}
+
 export interface Role {
   name: string;
   changePermissions: boolean;
@@ -36,6 +41,7 @@ export interface Role {
   addRemoveCard: boolean;
   moveTile: boolean;
   addRemoveTile: boolean;
+  assignCard: boolean;
 }
 
 export default function MainApp() {
@@ -52,9 +58,11 @@ export default function MainApp() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const username = useAuth();
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [showAssignedCards, setShowAssignedCards] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
 
 
-  
+
 
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
@@ -156,6 +164,30 @@ export default function MainApp() {
        }
      };
    }, [db, ownerUsername, workspaceId, username]);
+  
+  useEffect(() => {
+    
+    const fetchMembers = async () => {
+      if (ownerUsername && workspaceId) {
+        const membersCollection = collection(
+          db,
+          "users",
+          ownerUsername,
+          "workspaces",
+          workspaceId,
+          "members"
+        );
+        const membersSnapshot = await getDocs(membersCollection);
+        setMembers(
+          membersSnapshot.docs.map((doc) => ({
+            ...(doc.data() as Member),
+          }))
+        );
+      }
+    };
+
+    fetchMembers();
+  }, [db, ownerUsername, workspaceId]);
 
   const { removedCardIds, setRemovedCardIds, handleRemoveCard } =
     useRemoveCard(setTiles, userRole);
@@ -184,13 +216,17 @@ export default function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      
-        <Settings
-          workspaceId={workspaceId || ""}
-          ownerUsername={ownerUsername || ""}
-          userRole={userRole as Role}
-        />
-      
+      <i
+        className="fas fa-filter cursor-pointer"
+        onClick={() => setShowAssignedCards(!showAssignedCards)}
+      ></i>
+
+      <Settings
+        workspaceId={workspaceId || ""}
+        ownerUsername={ownerUsername || ""}
+        userRole={userRole as Role}
+        members={members}
+      />
 
       <Tiles
         tiles={tiles}
@@ -202,6 +238,7 @@ export default function MainApp() {
         setSelectedCard={setSelectedCard}
         setIsModalOpen={setIsModalOpen}
         userRole={userRole}
+        showAssignedCards={showAssignedCards}
       />
 
       <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
@@ -223,6 +260,9 @@ export default function MainApp() {
         selectedTile={selectedTile}
         tiles={tiles}
         handleRemoveCard={handleRemoveCard}
+        workspaceId={workspaceId || ""}
+        members={members}
+        userRole={userRole}
       />
     </div>
   );

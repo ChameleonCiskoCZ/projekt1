@@ -1,11 +1,14 @@
 import { Draggable, Droppable } from "@hello-pangea/dnd";
 import { Card, Tile } from "../../page";
+import "@fortawesome/fontawesome-free/css/all.css";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 interface CardsComponentProps {
   tile: Tile;
   setSelectedTile: (tile: Tile | null) => void; // Added missing property
   setSelectedCard: (card: Card | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
+  showAssignedCards: boolean;
 }
 
 export const Cards: React.FC<CardsComponentProps> = ({
@@ -13,7 +16,9 @@ export const Cards: React.FC<CardsComponentProps> = ({
   setSelectedTile,
   setSelectedCard,
   setIsModalOpen,
+  showAssignedCards,
 }) => {
+  const username = useAuth();
   // Updated parameter name
   return (
     <Droppable droppableId={`tile-${tile.id}`} type="card">
@@ -21,6 +26,10 @@ export const Cards: React.FC<CardsComponentProps> = ({
         <div {...provided.droppableProps} ref={provided.innerRef}>
           {tile.cards
             .sort((a, b) => a.position - b.position) // Sort the cards by position
+            .filter(
+              (card) =>
+                !showAssignedCards || card.assignedTo?.includes(username ?? "")
+            )
             .map((card, cardIndex) => (
               <Draggable key={card.id} draggableId={card.id} index={cardIndex}>
                 {(provided) => (
@@ -35,10 +44,13 @@ export const Cards: React.FC<CardsComponentProps> = ({
                       setIsModalOpen(true);
                     }}
                   >
-                    <div>
+                    <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold break-words">
                         {card.name}
                       </h3>
+                      {card.assignedTo?.includes(username ?? "") && (
+                        <i className="fas fa-user-check mr-1" />
+                      )}
                     </div>
                   </div>
                 )}

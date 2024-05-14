@@ -9,7 +9,7 @@ export const useHandleDrag = (
   userRole: Role | null
 ) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [movedCards, setMovedCards] = useState<{ [key: string]: string }>({});;
+  const [movedCards, setMovedCards] = useState<{ [key: string]: string }>({});
   const { notify } = useContext(NotificationContext);
   const ownerUsername = sessionStorage.getItem("ownerUsername");
   const username = useAuth();

@@ -22,6 +22,7 @@ interface TilesProps {
   setSelectedCard: React.Dispatch<React.SetStateAction<Card | null>>;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   userRole: Role | null;
+  showAssignedCards: boolean;
 }
 
 export const Tiles: React.FC<TilesProps> = ({
@@ -34,6 +35,7 @@ export const Tiles: React.FC<TilesProps> = ({
   setSelectedCard,
   setIsModalOpen,
   userRole,
+  showAssignedCards
 }) => {
   const tileRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +143,7 @@ export const Tiles: React.FC<TilesProps> = ({
                             tile={tile}
                             setSelectedCard={setSelectedCard}
                             setIsModalOpen={setIsModalOpen}
+                            showAssignedCards={showAssignedCards}
                           />
                           <div>
                             <AddCard
