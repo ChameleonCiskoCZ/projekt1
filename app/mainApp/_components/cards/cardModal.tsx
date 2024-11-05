@@ -1,7 +1,7 @@
 import { Card, Member, Role, Tile } from "../../page";
 import { useModal } from "../../_hooks/cards/useCardModal";
 import { Cards } from "./cards";
-import { useContext, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
 import { collection, doc, getDocs, getFirestore, updateDoc } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { useAuth } from "@/app/_hooks/useAuth";
@@ -41,11 +41,13 @@ export const CardModal: React.FC<CardModalProps> = ({
   const ownerUsername = sessionStorage.getItem("ownerUsername");
   const { notify } = useContext(NotificationContext);
 
-
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
       setIsAssigning(false);
     }
   };
@@ -56,7 +58,7 @@ export const CardModal: React.FC<CardModalProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  
+
   const handleAssignCard = async (memberUsername: string) => {
     if (username !== ownerUsername) {
       if (!userRole?.assignCard) {
@@ -88,7 +90,7 @@ export const CardModal: React.FC<CardModalProps> = ({
       // Update the card directly
       card.assignedTo = updatedAssignedTo;
     }
-/*
+    /*
     const cardRef = doc(
       db,
       "users",
@@ -105,6 +107,124 @@ export const CardModal: React.FC<CardModalProps> = ({
       assignedTo: updatedAssignedTo,
     });*/
   };
+  const trackingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track card intervals
+  const notificationIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(
+    new Map()
+  );
+  const [showEditPopup, setShowEditPopup] = useState(false);
+  const [editedTime, setEditedTime] = useState(selectedCard?.elapsedTime || 0);
+
+  
+
+  const handleTrackButtonClick = (cardId: string) => {
+    const currentIntervals = trackingIntervalsRef.current;
+    const notificationIntervals = notificationIntervalsRef.current;
+
+    if (currentIntervals.has(cardId)) {
+      // Stop tracking
+      clearInterval(currentIntervals.get(cardId));
+      clearInterval(notificationIntervals.get(cardId));
+      currentIntervals.delete(cardId);
+      notificationIntervals.delete(cardId);
+    } else {
+      // Start tracking
+      const timer = setInterval(() => {
+        setSelectedCard((prevCard) => {
+          if (prevCard && prevCard.id === cardId) {
+            const updatedCard = {
+              ...prevCard,
+              elapsedTime: (prevCard.elapsedTime || 0) + 1,
+            };
+
+            // Update the card in tiles array
+            tiles.forEach((tile) => {
+              tile.cards.forEach((card) => {
+                if (card.id === updatedCard.id) {
+                  card.elapsedTime = updatedCard.elapsedTime;
+                }
+              });
+            });
+
+            return updatedCard;
+          }
+          return prevCard;
+        });
+      }, 1000);
+
+      const notificationTimer = setInterval(() => {
+        notify(
+          `Timer for card ${selectedCard?.name} is still running.`,
+          "info"
+        );
+      }, 5* 60 * 1000); // Notify every 5 minutes
+
+      currentIntervals.set(cardId, timer);
+      notificationIntervals.set(cardId, notificationTimer);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = time % 60;
+    return `${hours}:${minutes < 10 ? "0" : ""}${minutes}:${
+      seconds < 10 ? "0" : ""
+    }${seconds}`;
+  };
+
+  const handleTimerClick = () => {
+    const elapsedTime = selectedCard?.elapsedTime || 0;
+    setEditedTime(elapsedTime);
+
+    const hours = Math.floor(elapsedTime / 3600);
+    const minutes = Math.floor((elapsedTime % 3600) / 60);
+    const seconds = elapsedTime % 60;
+
+    setEditedHours(hours);
+    setEditedMinutes(minutes);
+    setEditedSeconds(seconds);
+
+    setShowEditPopup(true);
+  };
+
+  const handleEditTimeChange = (e: ChangeEvent<HTMLInputElement>, unit: string) => {
+    const value = parseInt(e.target.value, 10);
+    if (unit === "hours") {
+      setEditedHours(value);
+    } else if (unit === "minutes") {
+      setEditedMinutes(value);
+    } else if (unit === "seconds") {
+      setEditedSeconds(value);
+    }
+  };
+
+  const handleSaveTime2 = () => {
+    const totalSeconds =
+      editedHours * 3600 + editedMinutes * 60 + editedSeconds;
+    // Update the selected card's elapsed time with totalSeconds
+    // Assuming selectedCard has an elapsedTime property
+    if (selectedCard) {
+      selectedCard.elapsedTime = totalSeconds;
+    }
+    setShowEditPopup(false);
+  };
+
+  const handleSaveTime = () => {
+    setSelectedCard((prevCard) => {
+      if (prevCard) {
+        return {
+          ...prevCard,
+          elapsedTime: editedTime,
+        };
+      }
+      return prevCard;
+    });
+    setShowEditPopup(false);
+  };
+  const [editedHours, setEditedHours] = useState(0);
+  const [editedMinutes, setEditedMinutes] = useState(0);
+  const [editedSeconds, setEditedSeconds] = useState(0);
+  
 
   const { descriptionRef, nameRef } = useModal(selectedCard, isModalOpen);
   return (
@@ -179,6 +299,84 @@ export const CardModal: React.FC<CardModalProps> = ({
                 >
                   Remove Card
                 </button>
+                <button
+                  className={`mt-1 mx-1 mb-0.5 p-2 rounded-t-xl rounded-b-sm text-white ${
+                    trackingIntervalsRef.current.has(selectedCard?.id ?? "")
+                      ? "bg-green-500 hover:bg-green-300"
+                      : "bg-green-300 hover:bg-green-500"
+                  }`}
+                  onClick={() => handleTrackButtonClick(selectedCard?.id ?? "")}
+                >
+                  {trackingIntervalsRef.current.has(selectedCard?.id ?? "")
+                    ? "Stop Tracking"
+                    : "Track Work Time"}
+                </button>
+                <div
+                  className="mb-1 mx-1 p-2 bg-gray-200 text-black rounded-b-xl rounded-t-sm cursor-pointer"
+                  onClick={handleTimerClick}
+                >
+                  {formatTime(selectedCard.elapsedTime || 0)}
+                </div>
+                {showEditPopup && (
+                  <div
+                    className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+                    onClick={() => setShowEditPopup(false)}
+                  >
+                    <div
+                      className="bg-white rounded-2xl p-2 shadow flex flex-col"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-between items-center font-bold text-lg mb-2">
+                        <h2 className="text-xl font-bold p-2">Edit Time</h2>
+                        <button
+                          className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-xl hover:bg-red-100"
+                          onClick={() => setShowEditPopup(false)}
+                        >
+                          ✖
+                        </button>
+                      </div>
+                      <div className="flex space-x-2 mb-4 px-2 items-center">
+                        <input
+                          type="number"
+                          value={editedHours}
+                          onChange={(e) => handleEditTimeChange(e, "hours")}
+                          className="border p-2 rounded-xl w-16 text-center "
+                          placeholder="Hours"
+                        />
+                        <span>:</span>
+                        <input
+                          type="number"
+                          value={editedMinutes}
+                          onChange={(e) => handleEditTimeChange(e, "minutes")}
+                          className="border p-2 rounded-xl w-16 text-center"
+                          placeholder="Minutes"
+                        />
+                        <span>:</span>
+                        <input
+                          type="number"
+                          value={editedSeconds}
+                          onChange={(e) => handleEditTimeChange(e, "seconds")}
+                          className="border p-2 rounded-xl w-16 text-center"
+                          placeholder="Seconds"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          className="m-1 p-2 bg-blue-500 hover:bg-blue-700 text-white rounded-xl"
+                          onClick={handleSaveTime2}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="m-1 p-2 bg-red-500 hover:bg-red-700 text-white rounded-xl"
+                          onClick={() => setShowEditPopup(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <button
                   className="m-1 p-2 bg-blue-300 hover:bg-blue-500 text-white rounded-xl"
                   onClick={() => {

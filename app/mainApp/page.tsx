@@ -11,6 +11,7 @@ import { useAuth } from "../_hooks/useAuth";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Settings from "./_components/settings/settings";
+import InvoicePopup from "./_components/invoice/invoicePopup";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -19,6 +20,7 @@ export type Card = {
   position: number;
   description: string;
   assignedTo: string[];
+  elapsedTime: number;
 };
 
 export type Tile = {
@@ -60,6 +62,7 @@ export default function MainApp() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [showAssignedCards, setShowAssignedCards] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+    const [isInvoicePopupOpen, setIsInvoicePopupOpen] = useState(false);
 
 
 
@@ -226,6 +229,18 @@ export default function MainApp() {
         ownerUsername={ownerUsername || ""}
         userRole={userRole as Role}
         members={members}
+      />
+
+      <button
+        className="bg-green-500 text-white p-2 rounded"
+        onClick={() => setIsInvoicePopupOpen(true)}
+      >
+        Create Invoice
+      </button>
+      <InvoicePopup
+        tiles={tiles}
+        isOpen={isInvoicePopupOpen}
+        onClose={() => setIsInvoicePopupOpen(false)}
       />
 
       <Tiles

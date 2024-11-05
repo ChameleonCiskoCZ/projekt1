@@ -4,13 +4,13 @@ import { NotificationContext } from "./notificationContext";
 
 type Notification = {
   message: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
 };
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const notify = (message: string, type: "success" | "error") => {
+  const notify = (message: string, type: "success" | "error" | "info") => {
     setNotifications((prev) => [...prev, { message, type }]);
   };
 
@@ -32,7 +32,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           <div
             key={index}
             className={`p-4 mb-4 rounded-xl shadow-lg text-white ${
-              notification.type === "success" ? "bg-green-500" : "bg-red-500"
+              notification.type === "success"
+                ? "bg-green-500"
+                : notification.type === "error"
+                ? "bg-red-500"
+                : notification.type === "info"
+                ? "bg-blue-500"
+                : ""
             }`}
           >
             {notification.message}

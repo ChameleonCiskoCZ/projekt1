@@ -11,7 +11,10 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.2",
     "@hello-pangea/dnd": "^16.5.0",
+    "@types/jspdf": "^2.0.0",
     "firebase": "^10.7.1",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "next": "14.0.4",
     "react": "^18",
     "react-dom": "^18",
