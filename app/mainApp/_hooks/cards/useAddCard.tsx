@@ -48,6 +48,7 @@ export const useAddCard = (
         position: newPosition,
         description: "",
         assignedTo: [],
+        elapsedTime: 0,
       };
 
       // Add the card to the tile
