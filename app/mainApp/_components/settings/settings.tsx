@@ -350,7 +350,10 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
 
   return (
     <div>
-      <i className="fas fa-cog cursor-pointer" onClick={handleOpenSettings}></i>
+      <i
+        className="fas fa-cog cursor-pointer mt-0.5 p-2 rounded-xl text-xl hover:bg-gray-100"
+        onClick={handleOpenSettings}
+      ></i>
 
       {isSettingsOpen && (
         <div

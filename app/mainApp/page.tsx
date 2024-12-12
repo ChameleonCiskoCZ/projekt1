@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Settings from "./_components/settings/settings";
 import InvoicePopup from "./_components/invoice/invoicePopup";
+import Navbar from "../components/Navbar";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -215,46 +216,49 @@ export default function MainApp() {
     workspaceId || "" // Provide a default value of an empty string
   );
 
- 
+ const rightButtons = (
+   <>
+     <Settings
+       workspaceId={workspaceId || ""}
+       ownerUsername={ownerUsername || ""}
+       userRole={userRole as Role}
+       members={members}
+     />
+     <i
+       className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-gray-100"
+       onClick={() => setShowAssignedCards(!showAssignedCards)}
+     ></i>
+     <i
+       className="fas fa-file-invoice text-xl mt-0.5 cursor-pointer p-2 rounded-xl hover:bg-gray-100"
+       onClick={() => setIsInvoicePopupOpen(true)}
+     ></i>
+   </>
+ );
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <i
-        className="fas fa-filter cursor-pointer"
-        onClick={() => setShowAssignedCards(!showAssignedCards)}
-      ></i>
+    <div className="min-h-screen bg-gray-100 flex">
+      <Navbar rightButtons={rightButtons} />
 
-      <Settings
-        workspaceId={workspaceId || ""}
-        ownerUsername={ownerUsername || ""}
-        userRole={userRole as Role}
-        members={members}
-      />
-
-      <button
-        className="bg-green-500 text-white p-2 rounded"
-        onClick={() => setIsInvoicePopupOpen(true)}
-      >
-        Create Invoice
-      </button>
       <InvoicePopup
         tiles={tiles}
         isOpen={isInvoicePopupOpen}
         onClose={() => setIsInvoicePopupOpen(false)}
       />
 
-      <Tiles
-        tiles={tiles}
-        setTiles={setTiles}
-        handleDragEnd={handleDragEnd}
-        removedTileIds={removedTileIds}
-        setRemovedTileIds={setRemovedTileIds}
-        setSelectedTile={setSelectedTile}
-        setSelectedCard={setSelectedCard}
-        setIsModalOpen={setIsModalOpen}
-        userRole={userRole}
-        showAssignedCards={showAssignedCards}
-      />
+      <div className="mt-12">
+        <Tiles
+          tiles={tiles}
+          setTiles={setTiles}
+          handleDragEnd={handleDragEnd}
+          removedTileIds={removedTileIds}
+          setRemovedTileIds={setRemovedTileIds}
+          setSelectedTile={setSelectedTile}
+          setSelectedCard={setSelectedCard}
+          setIsModalOpen={setIsModalOpen}
+          userRole={userRole}
+          showAssignedCards={showAssignedCards}
+        />
+      </div>
 
       <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
         <button
