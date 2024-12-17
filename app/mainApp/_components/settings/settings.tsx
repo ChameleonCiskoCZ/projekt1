@@ -127,24 +127,26 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
   };
 
   useEffect(() => {
-    const rolesCollection = collection(
-      db,
-      "users",
-      ownerUsername,
-      "workspaces",
-      workspaceId,
-      "roles"
-    );
-    const unsubscribe = onSnapshot(rolesCollection, (snapshot) => {
-      setRoles(
-        snapshot.docs.map((doc) => ({
-          ...(doc.data() as Role),
-        }))
+    if (db && ownerUsername && workspaceId) {
+      const rolesCollection = collection(
+        db,
+        "users",
+        ownerUsername,
+        "workspaces",
+        workspaceId,
+        "roles"
       );
-    });
+      const unsubscribe = onSnapshot(rolesCollection, (snapshot) => {
+        setRoles(
+          snapshot.docs.map((doc) => ({
+            ...(doc.data() as Role),
+          }))
+        );
+      });
 
-    // Clean up the listener when the component unmounts
-    return () => unsubscribe();
+      // Clean up the listener when the component unmounts
+      return () => unsubscribe();
+    }
   }, [db, ownerUsername, workspaceId]);
 
   const handleSelectRole = (role: Role) => {

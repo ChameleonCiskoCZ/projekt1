@@ -54,7 +54,7 @@ export default function MainApp() {
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get('workspaceId');
   //const workspaceId = sessionStorage.getItem("workspaceId");
-  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const [ownerUsername, setOwnerUsername] = useState<string | null>(null); 
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -63,7 +63,23 @@ export default function MainApp() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [showAssignedCards, setShowAssignedCards] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
-    const [isInvoicePopupOpen, setIsInvoicePopupOpen] = useState(false);
+  const [isInvoicePopupOpen, setIsInvoicePopupOpen] = useState(false);
+  
+  useEffect(() => {
+    const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
+    const storedUserRole = sessionStorage.getItem("userRole");
+    const storedMembers = sessionStorage.getItem("members");
+
+    if (storedOwnerUsername) {
+      setOwnerUsername(storedOwnerUsername);
+    }
+    if (storedUserRole) {
+      setUserRole(JSON.parse(storedUserRole));
+    }
+    if (storedMembers) {
+      setMembers(JSON.parse(storedMembers));
+    }
+  }, []);
 
 
 
@@ -144,6 +160,7 @@ export default function MainApp() {
                  (roleSnapshot) => {
                    const roleData = roleSnapshot.data();
                    setUserRole(roleData as Role);
+                   sessionStorage.setItem("userRole", JSON.stringify(roleData));
                  }
                );
 
@@ -182,11 +199,11 @@ export default function MainApp() {
           "members"
         );
         const membersSnapshot = await getDocs(membersCollection);
-        setMembers(
-          membersSnapshot.docs.map((doc) => ({
-            ...(doc.data() as Member),
-          }))
-        );
+        const membersList = membersSnapshot.docs.map((doc) => ({
+          ...(doc.data() as Member),
+        }));
+        setMembers(membersList);
+        sessionStorage.setItem("members", JSON.stringify(membersList));
       }
     };
 
@@ -213,7 +230,7 @@ export default function MainApp() {
     movedCards,
     removedCardIds,
     setRemovedCardIds,
-    workspaceId || "" // Provide a default value of an empty string
+    workspaceId || "" 
   );
 
  const rightButtons = (
@@ -237,7 +254,9 @@ export default function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      <Navbar rightButtons={rightButtons} />
+      <Navbar
+        rightButtons={rightButtons}
+      />
 
       <InvoicePopup
         tiles={tiles}
@@ -280,6 +299,7 @@ export default function MainApp() {
         tiles={tiles}
         handleRemoveCard={handleRemoveCard}
         workspaceId={workspaceId || ""}
+        ownerUsername={ownerUsername || ""}
         members={members}
         userRole={userRole}
       />

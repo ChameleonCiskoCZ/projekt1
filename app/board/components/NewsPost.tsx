@@ -30,7 +30,7 @@ const NewsPost: React.FC<NewsPostProps> = ({
   };
 
   return (
-    <div className="border p-4 rounded-2xl shadow bg-white relative">
+    <div className=" p-4 rounded-2xl shadow bg-white relative">
       <div className="text-sm text-gray-500 mb-2">
         Created by: {post.creator} on {post.createdAt.toLocaleDateString()} at{" "}
         {post.createdAt.toLocaleTimeString()}

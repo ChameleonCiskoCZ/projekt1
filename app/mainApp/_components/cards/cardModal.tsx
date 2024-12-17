@@ -19,6 +19,7 @@ interface CardModalProps {
   workspaceId: string;
   members: Member[];
   userRole: Role | null;
+  ownerUsername: string;
 }
 
 
@@ -31,6 +32,7 @@ export const CardModal: React.FC<CardModalProps> = ({
   setSelectedCard,
   selectedTile,
   workspaceId,
+  ownerUsername,
   members,
   userRole,
 }) => {
@@ -38,7 +40,7 @@ export const CardModal: React.FC<CardModalProps> = ({
   const db = getFirestore(firebase_app);
   const [isAssigning, setIsAssigning] = useState(false);
   const username = useAuth();
-  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  //const ownerUsername = sessionStorage.getItem("ownerUsername");
   const { notify } = useContext(NotificationContext);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);

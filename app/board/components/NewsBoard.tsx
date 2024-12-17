@@ -13,108 +13,84 @@ interface Post {
   createdAt: Date;
 }
 
-const NewsBoard: React.FC = () => {
+interface NewsBoardProps {
+  ownerUsername: string | null;
+}
+
+const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
   const [posts, setPosts] = useState<Post[]>([]);
-    const [newPostContent, setNewPostContent] = useState("");
-    const [editPostId, setEditPostId] = useState<string | null>(null);
-    const [hasPermission, setHasPermission] = useState(true); // Change this based on actual permission logic
-    const ownerUsername = sessionStorage.getItem("ownerUsername");
-    const searchParams = useSearchParams();
-    const workspaceId = searchParams.get("workspaceId");
-    const creatorName = useAuth();
-    const db = getFirestore(firebase_app);
+  const [newPostContent, setNewPostContent] = useState("");
+  const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(true); // Change this based on actual permission logic
+  //const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspaceId");
+  const creatorName = useAuth();
+  const db = getFirestore(firebase_app);
 
- useEffect(() => {
-   const fetchPosts = async () => {
-     if (ownerUsername && workspaceId) {
-       const q = query(
-         collection(
-           db,
-           "users",
-           ownerUsername,
-           "workspaces",
-           workspaceId,
-           "posts"
-         ),
-         orderBy("createdAt", "desc")
-       );
-       const querySnapshot = await getDocs(q);
-       const postsData: Post[] = [];
-       querySnapshot.forEach((doc) => {
-         postsData.push({
-           id: doc.id,
-           ...doc.data(),
-           createdAt: doc.data().createdAt.toDate(),
-         } as Post);
-       });
-       setPosts(postsData);
-     }
-   };
-
-   fetchPosts();
- }, [workspaceId, ownerUsername]);
-
- const handleCreatePost = async () => {
-   if (newPostContent.trim() && creatorName?.trim()) {
-     const newPost = {
-       creator: creatorName,
-       content: newPostContent,
-       createdAt: new Date(),
-     };
-     if (ownerUsername && workspaceId) {
-       await addDoc(
-         collection(
-           db,
-           "users",
-           ownerUsername,
-           "workspaces",
-           workspaceId,
-           "posts"
-         ),
-         newPost
-       );
-     }
-     setPosts([{ id: new Date().toISOString(), ...newPost }, ...posts]);
-     setNewPostContent("");
-   }
- };
-
-    
-    const handleEditPost = async (post: Post) => {
-      setEditPostId(post.id);
-      setNewPostContent(post.content);
-    };
-
-    const handleUpdatePost = async (postId: string, newContent: string) => {
-      const post = posts.find((post) => post.id === postId);
-      if (post && newContent.trim() && post.content !== newContent) {
-        if (ownerUsername && workspaceId) {
-          const postRef = doc(
+  useEffect(() => {
+    const fetchPosts = async () => {
+      if (ownerUsername && workspaceId) {
+        const q = query(
+          collection(
             db,
             "users",
             ownerUsername,
             "workspaces",
             workspaceId,
-            "posts",
-            postId
-          );
-          await updateDoc(postRef, {
-            content: newContent,
-            updatedAt: new Date(),
-          });
-          setPosts(
-            posts.map((post) =>
-              post.id === postId
-                ? { ...post, content: newContent, updatedAt: new Date() }
-                : post
-            )
-          );
-        }
+            "posts"
+          ),
+          orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+        const postsData: Post[] = [];
+        querySnapshot.forEach((doc) => {
+          postsData.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt.toDate(),
+          } as Post);
+        });
+        setPosts(postsData);
       }
     };
-    
 
-    const handleDeletePost = async (postId: string) => {
+    fetchPosts();
+  }, [workspaceId, ownerUsername]);
+
+  const handleCreatePost = async () => {
+    if (newPostContent.trim() && creatorName?.trim()) {
+      const newPost = {
+        creator: creatorName,
+        content: newPostContent,
+        createdAt: new Date(),
+      };
+      if (ownerUsername && workspaceId) {
+        await addDoc(
+          collection(
+            db,
+            "users",
+            ownerUsername,
+            "workspaces",
+            workspaceId,
+            "posts"
+          ),
+          newPost
+        );
+      }
+      setPosts([{ id: new Date().toISOString(), ...newPost }, ...posts]);
+      setNewPostContent("");
+    }
+  };
+
+  const handleEditPost = async (post: Post) => {
+    setEditPostId(post.id);
+    setNewPostContent(post.content);
+  };
+
+  const handleUpdatePost = async (postId: string, newContent: string) => {
+    const post = posts.find((post) => post.id === postId);
+    if (post && newContent.trim() && post.content !== newContent) {
       if (ownerUsername && workspaceId) {
         const postRef = doc(
           db,
@@ -125,13 +101,39 @@ const NewsBoard: React.FC = () => {
           "posts",
           postId
         );
-        await deleteDoc(postRef);
-        setPosts(posts.filter((post) => post.id !== postId));
+        await updateDoc(postRef, {
+          content: newContent,
+          updatedAt: new Date(),
+        });
+        setPosts(
+          posts.map((post) =>
+            post.id === postId
+              ? { ...post, content: newContent, updatedAt: new Date() }
+              : post
+          )
+        );
       }
-    };
-    
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (ownerUsername && workspaceId) {
+      const postRef = doc(
+        db,
+        "users",
+        ownerUsername,
+        "workspaces",
+        workspaceId,
+        "posts",
+        postId
+      );
+      await deleteDoc(postRef);
+      setPosts(posts.filter((post) => post.id !== postId));
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-screen-sm">
+    <div className=" mx-auto max-w-screen-sm">
       {hasPermission && (
         <div className="mb-4">
           <h2 className="text-xl font-bold mb-2">Create New Post</h2>
