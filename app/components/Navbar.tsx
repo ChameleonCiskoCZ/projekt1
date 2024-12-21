@@ -13,14 +13,15 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
   const searchParams = useSearchParams();
     const workspaceId = searchParams.get("workspaceId");
-  //const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(false);
-  const initialNavbarState =
-    typeof window !== "undefined" && sessionStorage.getItem("isNavbarCollapsed")
-      ? JSON.parse(sessionStorage.getItem("isNavbarCollapsed") as string)
-      : false;
-  const [isNavbarCollapsed, setIsNavbarCollapsed] =
-    useState(initialNavbarState);
-  
+  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const storedState = sessionStorage.getItem("isNavbarCollapsed");
+    if (storedState !== null) {
+      setIsNavbarCollapsed(JSON.parse(storedState));
+    }
+  }, []);
+
   const handleNavbarToggle = () => {
     const newState = !isNavbarCollapsed;
     setIsNavbarCollapsed(newState);
@@ -63,6 +64,14 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
           >
             <i className="fas fa-bell text-xl"></i>
             {!isNavbarCollapsed && <span>Announcements</span>}
+          </Link>
+
+          <Link
+            href={`/chat?workspaceId=${workspaceId}`}
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100"
+          >
+            <i className="fas fa-message text-xl"></i>
+            {!isNavbarCollapsed && <span>Chat</span>}
           </Link>
           <Link
             href="./workspaces"
