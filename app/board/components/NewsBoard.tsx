@@ -56,7 +56,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
     };
 
     fetchPosts();
-  }, [workspaceId, ownerUsername]);
+  }, [workspaceId, ownerUsername, db]);
 
   const handleCreatePost = async () => {
     if (newPostContent.trim() && creatorName?.trim()) {
@@ -146,7 +146,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
           />
           <button
             onClick={handleCreatePost}
-            className="bg-blue-500 text-white p-2 rounded-xl"
+            className="bg-sky-500 text-white p-2 rounded-xl"
           >
             Create Post
           </button>

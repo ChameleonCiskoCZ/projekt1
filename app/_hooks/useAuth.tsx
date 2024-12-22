@@ -22,7 +22,7 @@ export const useAuth = () => {
 
    // Clean up the subscription on unmount
    return () => unsubscribe();
- }, []);
+ }, [router, auth]);
 
   return username;
 };

@@ -13,7 +13,10 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
   const searchParams = useSearchParams();
     const workspaceId = searchParams.get("workspaceId");
-  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(false);
+  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(() => {
+    const storedState = sessionStorage.getItem("isNavbarCollapsed");
+    return storedState !== null ? JSON.parse(storedState) : false;
+  });
 
   useEffect(() => {
     const storedState = sessionStorage.getItem("isNavbarCollapsed");

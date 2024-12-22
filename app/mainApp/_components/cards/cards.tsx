@@ -45,7 +45,7 @@ export const Cards: React.FC<CardsComponentProps> = ({
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold break-words">
+                      <h3 className="text-lg font-semibold break-words overflow-wrap-anywhere">
                         {card.name}
                       </h3>
                       {card.assignedTo?.includes(username ?? "") && (

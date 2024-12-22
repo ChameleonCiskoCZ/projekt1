@@ -35,7 +35,7 @@ export interface ChatThread {
   messages: ChatMessage[];
 }
 
-export default function  ()  {
+export default function Chat() {
   const db = getFirestore(firebase_app);
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get("workspaceId");
@@ -50,6 +50,7 @@ export default function  ()  {
   const username = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastVisible, setLastVisible] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const storedUserRole = sessionStorage.getItem("userRole");
@@ -197,6 +198,7 @@ export default function  ()  {
 
   const loadMoreMessages = async () => {
     if (lastVisible && selectedThreadId && workspaceId && ownerUsername) {
+      setLoading(true);
       const messagesCollection = collection(
         db,
         "users",
@@ -229,12 +231,18 @@ export default function  ()  {
         };
       });
 
-      setMessages((prevMessages) => {
-        const combinedMessages = [...messagesData.reverse(), ...prevMessages];
-        combinedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        return combinedMessages;
-      });
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setTimeout(() => {
+        setMessages((prevMessages) => {
+          const combinedMessages = [...messagesData.reverse(), ...prevMessages];
+          combinedMessages.sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          return combinedMessages;
+        });
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setLoading(false);
+      }, 1000); // Add a delay of 1 second
     }
   };
 
@@ -267,9 +275,14 @@ export default function  ()  {
           setNewThreadTitle={setNewThreadTitle}
           handleAddThread={handleAddThread}
         />
-        <div className="flex-1 p-4 bg-white shadow rounded-2xl ml-4">
+        <div className="flex-1 p-4 bg-white shadow rounded-2xl ml-4 relative">
           {selectedThreadId ? (
             <>
+              {loading && (
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 p-2">
+                  <div className="loader"></div>
+                </div>
+              )}
               <div className="flex flex-col h-full">
                 <MessageList
                   messages={messages}
@@ -290,6 +303,4 @@ export default function  ()  {
       </div>
     </div>
   );
-};
-
-
+}

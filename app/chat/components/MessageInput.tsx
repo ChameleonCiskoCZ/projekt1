@@ -13,9 +13,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   return (
     <div className="mt-4">
-      <textarea
+      <input
         className="w-full p-2 border rounded"
-        rows={3}
+        onKeyDown={(e) => { if (e.key === "Enter") handleSendMessage(); }}
         value={newMessage}
         onChange={(e) => setNewMessage(e.target.value)}
       />

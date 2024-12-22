@@ -14,15 +14,16 @@ export const useModal = (selectedCard: Card | null, isModalOpen: boolean) => {
     };
 
     resizeTextArea();
+ const currentDescriptionRef = descriptionRef.current;
+ if (currentDescriptionRef) {
+   currentDescriptionRef.addEventListener("input", resizeTextArea);
+ }
 
-    if (descriptionRef.current) {
-      descriptionRef.current.addEventListener("input", resizeTextArea);
-      return () => {
-        if (descriptionRef.current) {
-          descriptionRef.current.removeEventListener("input", resizeTextArea);
-        }
-      };
-    }
+ return () => {
+   if (currentDescriptionRef) {
+     currentDescriptionRef.removeEventListener("input", resizeTextArea);
+   }
+ };
   }, [selectedCard?.description, isModalOpen]);
 
   //modal card name
@@ -37,14 +38,16 @@ export const useModal = (selectedCard: Card | null, isModalOpen: boolean) => {
 
     resizeTextArea();
 
-    if (nameRef.current) {
-      nameRef.current.addEventListener("input", resizeTextArea);
-      return () => {
-        if (nameRef.current) {
-          nameRef.current.removeEventListener("input", resizeTextArea);
-        }
-      };
+    const currentNameRef = nameRef.current;
+    if (currentNameRef) {
+      currentNameRef.addEventListener("input", resizeTextArea);
     }
+
+    return () => {
+      if (currentNameRef) {
+        currentNameRef.removeEventListener("input", resizeTextArea);
+      }
+    };
   }, [selectedCard?.name, isModalOpen]);
 
   return {

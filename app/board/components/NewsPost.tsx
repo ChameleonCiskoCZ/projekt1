@@ -30,10 +30,13 @@ const NewsPost: React.FC<NewsPostProps> = ({
   };
 
   return (
-    <div className=" p-4 rounded-2xl shadow bg-white relative">
-      <div className="text-sm text-gray-500 mb-2">
-        Created by: {post.creator} on {post.createdAt.toLocaleDateString()} at{" "}
-        {post.createdAt.toLocaleTimeString()}
+    <div className="p-4 rounded-2xl shadow bg-white relative">
+      <div className="mb-2">
+        <strong>{post.creator}</strong>
+        <span className="text-sm text-gray-500 ml-2">
+          {post.createdAt.toLocaleDateString()} {" "}
+          {post.createdAt.toLocaleTimeString()}
+        </span>
       </div>
       {isEditing ? (
         <textarea
@@ -43,13 +46,13 @@ const NewsPost: React.FC<NewsPostProps> = ({
           rows={4}
         />
       ) : (
-        <div>{post.content}</div>
+        <div className="overflow-wrap-anywhere ">{post.content}</div>
       )}
       <div className="flex justify-end space-x-2 mt-2">
         {isEditing ? (
           <button
             onClick={handleUpdate}
-            className="bg-blue-500 text-white p-1 rounded"
+            className="bg-blue-500 text-white p-2 rounded-xl"
           >
             Save
           </button>
@@ -57,10 +60,8 @@ const NewsPost: React.FC<NewsPostProps> = ({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className=" text-xl p-2 rounded-xl hover:bg-gray-100"
-            >
-              ☰
-            </button>
+              className="fas fa-bars text-xl p-2 rounded-xl hover:bg-gray-100"
+            ></button>
             {menuOpen && (
               <div className="absolute z-10 right-0 rounded-xl mt-2 w-32 bg-white border shadow-lg">
                 <button

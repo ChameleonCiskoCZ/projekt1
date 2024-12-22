@@ -28,11 +28,13 @@ const ThreadList: React.FC<ThreadListProps> = ({
           <li
             key={thread.id}
             className={`p-2 cursor-pointer rounded-lg ${
-              selectedThreadId === thread.id ? "bg-gray-200" : "hover:bg-gray-100"
+              selectedThreadId === thread.id
+                ? "bg-gray-200"
+                : "hover:bg-gray-100"
             }`}
             onClick={() => handleSelectThread(thread.id)}
           >
-            {thread.title}
+            <span className="overflow-wrap-anywhere">{thread.title}</span>
           </li>
         ))}
       </ul>
@@ -45,7 +47,7 @@ const ThreadList: React.FC<ThreadListProps> = ({
           onChange={(e) => setNewThreadTitle(e.target.value)}
         />
         <button
-          className="mt-2 p-2 bg-blue-500 text-white rounded-lg w-full"
+          className="mt-2 p-2 bg-sky-300 hover:bg-sky-500 text-white rounded-lg w-full"
           onClick={handleAddThread}
         >
           Add Thread

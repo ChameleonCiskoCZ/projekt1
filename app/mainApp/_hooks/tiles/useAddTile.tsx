@@ -26,7 +26,7 @@ export const useAddTile = (
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [tileRef]);
 
   const handleAddTile = () => {
     if (username !== ownerUsername) {

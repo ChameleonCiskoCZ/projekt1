@@ -29,14 +29,16 @@ export const useTileNameChange = (
 
     resizeTextArea();
 
-    if (textareaRef.current) {
-      textareaRef.current.addEventListener("input", resizeTextArea);
-      return () => {
-        if (textareaRef.current) {
-          textareaRef.current.removeEventListener("input", resizeTextArea);
-        }
-      };
+    const currentTextareaRef = textareaRef.current;
+    if (currentTextareaRef) {
+      currentTextareaRef.addEventListener("input", resizeTextArea);
     }
+
+    return () => {
+      if (currentTextareaRef) {
+        currentTextareaRef.removeEventListener("input", resizeTextArea);
+      }
+    };
   }, [newName]);
 
   return {

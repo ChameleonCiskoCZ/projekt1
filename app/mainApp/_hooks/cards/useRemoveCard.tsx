@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Tile } from "../../page";
 import { Role } from "../../page";
 import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
@@ -13,8 +13,16 @@ export const useRemoveCard = (
   }>({});
 
   const { notify } = useContext(NotificationContext);
-  const ownerUsername = sessionStorage.getItem("ownerUsername");
+  const[ownerUsername, setOwnerUsername] = useState<string | null>(null);
   const username = useAuth();
+
+  useEffect(() => {
+      const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
+      if (storedOwnerUsername) {
+        setOwnerUsername(storedOwnerUsername);
+      }
+
+    }, []);
 
   const handleRemoveCard = (tileId: string, cardId: string) => {
     if (username !== ownerUsername) {

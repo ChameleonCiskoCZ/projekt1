@@ -275,14 +275,16 @@ export default function WorkspacePage() {
 
     resizeTextArea();
 
-    if (editFieldRef.current) {
-      editFieldRef.current.addEventListener("input", resizeTextArea);
-      return () => {
-        if (editFieldRef.current) {
-          editFieldRef.current.removeEventListener("input", resizeTextArea);
-        }
-      };
+    const currentEditFieldRef = editFieldRef.current;
+    if (currentEditFieldRef) {
+      currentEditFieldRef.addEventListener("input", resizeTextArea);
     }
+
+    return () => {
+      if (currentEditFieldRef) {
+        currentEditFieldRef.removeEventListener("input", resizeTextArea);
+      }
+    };
   }, [newName]);
 
   /*if (selectedWorkspaceId) {

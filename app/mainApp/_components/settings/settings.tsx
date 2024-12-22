@@ -24,31 +24,57 @@ interface UserInfo {
   members: Member[];
 }
 
-const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, members }) => {
+const Settings: React.FC<UserInfo> = ({
+  ownerUsername,
+  workspaceId,
+  userRole,
+  members,
+}) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Roles");
   const [newRoleName, setNewRoleName] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [moveCardPermission, setMoveCardPermission] = useState(false);
-  const [addRemoveCardPermission, setAddRemoveCardPermission] = useState(false);
-  const [addRemoveRolePermission, setAddRemoveRolePermission] = useState(false);
-  const [changePermissionsPermission, setChangePermissionsPermission] = useState(false);
-  const [moveTilePermission, setMoveTilePermission] =
-    useState(false);
-  const [addRemoveTilePermission, setAddRemoveTilePermission] = useState(false);
-  const [assignCardPermission, setAssignCardPermission] = useState(false);
-  const db = getFirestore(firebase_app);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [permissions, setPermissions] = useState({
+    moveCard: false,
+    addRemoveCard: false,
+    addRemoveRole: false,
+    changePermissions: false,
+    moveTile: false,
+    addRemoveTile: false,
+    assignCard: false,
+  });
+  const db = getFirestore(firebase_app);
   const username = useAuth();
   const { notify } = useContext(NotificationContext);
-  
 
- 
+  useEffect(() => {
+    if (db && ownerUsername && workspaceId) {
+      const rolesCollection = collection(
+        db,
+        "users",
+        ownerUsername,
+        "workspaces",
+        workspaceId,
+        "roles"
+      );
+      const unsubscribe = onSnapshot(rolesCollection, (snapshot) => {
+        setRoles(snapshot.docs.map((doc) => doc.data() as Role));
+      });
 
-  const handleSelectMember = (member: Member) => {
-    setSelectedMember(member);
+      return () => unsubscribe();
+    }
+  }, [db, ownerUsername, workspaceId]);
+
+  const handleOpenSettings = () => setIsSettingsOpen(true);
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+    setSelectedRole(null);
+    setSelectedMember(null);
   };
+
+  const handleSelectMember = (member: Member) => setSelectedMember(member);
 
   const handleAssignRole = async (role: Role) => {
     if (selectedMember) {
@@ -62,43 +88,22 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
         selectedMember.username
       );
       await updateDoc(memberRef, { role: role.name });
-
-      // Update selectedMember state
-      setSelectedMember((prevState) => {
-        if (prevState) {
-          return {
-            ...prevState,
-            role: role.name,
-          };
-        }
-        return null;
-      });
+      setSelectedMember((prevState) =>
+        prevState ? { ...prevState, role: role.name } : null
+      );
     }
-  };
-
-  const handleOpenSettings = () => {
-    setIsSettingsOpen(true);
-  };
-
-  const handleCloseSettings = () => {
-    setIsSettingsOpen(false);
-    setSelectedRole(null);
-    setSelectedMember(null);
   };
 
   const handleCreateRole = async () => {
     if (!newRoleName.trim()) {
-      console.log("Role name cannot be empty.");
       notify("Role name cannot be empty.", "error");
       return;
     }
-    if (username !== ownerUsername) {
-      if (!userRole?.addRemoveRole) {
-        console.log("You do not have permission to create roles.");
-        notify("You do not have permission to create roles.", "error");
-        return;
-      }
+    if (username !== ownerUsername && !userRole?.addRemoveRole) {
+      notify("You do not have permission to create roles.", "error");
+      return;
     }
+
     const roleRef = doc(
       db,
       "users",
@@ -111,7 +116,7 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
 
     const roleSnapshot = await getDoc(roleRef);
     if (roleSnapshot.exists()) {
-      console.log("Role already exists");
+      notify("Role already exists", "error");
       setNewRoleName("");
       return;
     }
@@ -126,45 +131,29 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
     setNewRoleName("");
   };
 
-  useEffect(() => {
-    if (db && ownerUsername && workspaceId) {
-      const rolesCollection = collection(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles"
-      );
-      const unsubscribe = onSnapshot(rolesCollection, (snapshot) => {
-        setRoles(
-          snapshot.docs.map((doc) => ({
-            ...(doc.data() as Role),
-          }))
-        );
-      });
-
-      // Clean up the listener when the component unmounts
-      return () => unsubscribe();
-    }
-  }, [db, ownerUsername, workspaceId]);
-
   const handleSelectRole = (role: Role) => {
     setSelectedRole(role);
-    setMoveCardPermission(role.moveCard);
+    setPermissions({
+      moveCard: role.moveCard,
+      addRemoveCard: role.addRemoveCard,
+      addRemoveRole: role.addRemoveRole,
+      changePermissions: role.changePermissions,
+      moveTile: role.moveTile,
+      addRemoveTile: role.addRemoveTile,
+      assignCard: role.assignCard,
+    });
   };
 
-  const handleToggleMoveCardPermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
+  const handleTogglePermission = async (
+    permission: keyof typeof permissions
+  ) => {
+    if (username !== ownerUsername && !userRole?.changePermissions) {
+      notify("You do not have permission to change permissions.", "error");
+      return;
     }
     if (selectedRole) {
-      const updatedPermission = !moveCardPermission;
-      setMoveCardPermission(updatedPermission);
+      const updatedPermission = !permissions[permission];
+      setPermissions((prev) => ({ ...prev, [permission]: updatedPermission }));
       const roleRef = doc(
         db,
         "users",
@@ -174,163 +163,14 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
         "roles",
         selectedRole.name
       );
-      await updateDoc(roleRef, { moveCard: updatedPermission });
+      await updateDoc(roleRef, { [permission]: updatedPermission });
     }
   };
-
-  const handleToggleAddRemoveCardPermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !addRemoveCardPermission;
-      setAddRemoveCardPermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { addRemoveCard: updatedPermission });
-    }
-  };
-
-  const handleToggleAddRemoveRolePermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !addRemoveRolePermission;
-      setAddRemoveRolePermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { addRemoveRole: updatedPermission });
-    }
-  };
-
-  const handleToggleChangePermissionsPermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !changePermissionsPermission;
-      setChangePermissionsPermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { changePermissions: updatedPermission });
-    }
-  };
-
-  const handleToggleMoveTilePermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !moveTilePermission;
-      setMoveTilePermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { moveTile: updatedPermission });
-    }
-  };
-
-  const handleToggleAddRemoveTilePermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !addRemoveTilePermission;
-      setAddRemoveTilePermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { addRemoveTile: updatedPermission });
-    }
-  };
-
-  const handleAssignCardPermission = async () => {
-    if (username !== ownerUsername) {
-      if (!userRole?.changePermissions) {
-        console.log("You do not have permission to change permissions.");
-        notify("You do not have permission to change permissions.", "error");
-        return;
-      }
-    }
-    if (selectedRole) {
-      const updatedPermission = !assignCardPermission;
-      setAssignCardPermission(updatedPermission);
-      const roleRef = doc(
-        db,
-        "users",
-        ownerUsername,
-        "workspaces",
-        workspaceId,
-        "roles",
-        selectedRole.name
-      );
-      await updateDoc(roleRef, { assignCard: updatedPermission });
-    }
-  };
-
-
 
   const handleRemoveRole = async (role: Role) => {
-    if (username !== ownerUsername) {
-      if (!userRole?.addRemoveRole) {
-        console.log("You do not have permission to remove roles.");
-        notify("You do not have permission to remove roles.", "error");
-        return;
-      }
+    if (username !== ownerUsername && !userRole?.addRemoveRole) {
+      notify("You do not have permission to remove roles.", "error");
+      return;
     }
     const roleRef = doc(
       db,
@@ -341,10 +181,7 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
       "roles",
       role.name
     );
-
     await deleteDoc(roleRef);
-
-    // If the deleted role was the selected one, deselect it
     if (selectedRole?.name === role.name) {
       setSelectedRole(null);
     }
@@ -431,7 +268,7 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
                       <button
                         className="p-2 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-100"
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent the click event from bubbling up to the parent div
+                          e.stopPropagation();
                           handleRemoveRole(role);
                         }}
                       >
@@ -449,93 +286,105 @@ const Settings: React.FC<UserInfo> = ({ ownerUsername, workspaceId, userRole, me
                       <h2 className="text-lg font-bold text-start">
                         Member Settings
                       </h2>
-                      <div className="flex items-center justify-between space-x-2">
-                        <span>Add/Remove Role</span>
-                        <Switch
-                          onChange={handleToggleAddRemoveRolePermission}
-                          checked={addRemoveRolePermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <span>Change permissions</span>
-                        <Switch
-                          onChange={handleToggleChangePermissionsPermission}
-                          checked={changePermissionsPermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
+                      {[
+                        {
+                          label: "Add/Remove Role",
+                          permission: "addRemoveRole",
+                        },
+                        {
+                          label: "Change permissions",
+                          permission: "changePermissions",
+                        },
+                      ].map(({ label, permission }) => (
+                        <div
+                          key={permission}
+                          className="flex items-center justify-between space-x-2"
+                        >
+                          <span>{label}</span>
+                          <Switch
+                            onChange={() =>
+                              handleTogglePermission(
+                                permission as keyof typeof permissions
+                              )
+                            }
+                            checked={
+                              permissions[
+                                permission as keyof typeof permissions
+                              ]
+                            }
+                            offColor="#767577"
+                            onColor="#81b0ff"
+                            height={20}
+                            width={48}
+                            handleDiameter={16}
+                          />
+                        </div>
+                      ))}
                       <h2 className="text-lg font-bold text-start">Cards</h2>
-                      <div className="flex  items-center justify-between space-x-2">
-                        <span>Move Card</span>
-                        <Switch
-                          onChange={handleToggleMoveCardPermission}
-                          checked={moveCardPermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <span>Add/Remove Card</span>
-                        <Switch
-                          onChange={handleToggleAddRemoveCardPermission}
-                          checked={addRemoveCardPermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
-                      <div className="flex  items-center justify-between space-x-2">
-                        <span>Assign Cards</span>
-                        <Switch
-                          onChange={handleAssignCardPermission}
-                          checked={assignCardPermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
+                      {[
+                        { label: "Move Card", permission: "moveCard" },
+                        {
+                          label: "Add/Remove Card",
+                          permission: "addRemoveCard",
+                        },
+                        { label: "Assign Cards", permission: "assignCard" },
+                      ].map(({ label, permission }) => (
+                        <div
+                          key={permission}
+                          className="flex items-center justify-between space-x-2"
+                        >
+                          <span>{label}</span>
+                          <Switch
+                            onChange={() =>
+                              handleTogglePermission(
+                                permission as keyof typeof permissions
+                              )
+                            }
+                            checked={
+                              permissions[
+                                permission as keyof typeof permissions
+                              ]
+                            }
+                            offColor="#767577"
+                            onColor="#81b0ff"
+                            height={20}
+                            width={48}
+                            handleDiameter={16}
+                          />
+                        </div>
+                      ))}
                       <h2 className="text-lg font-bold text-start">Tiles</h2>
-
-                      <div className="flex items-center justify-between space-x-2">
-                        <span>Move tile</span>
-                        <Switch
-                          onChange={handleToggleMoveTilePermission}
-                          checked={moveTilePermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <span>Add/Remove tile</span>
-                        <Switch
-                          onChange={handleToggleAddRemoveTilePermission}
-                          checked={addRemoveTilePermission}
-                          offColor="#767577"
-                          onColor="#81b0ff"
-                          height={20}
-                          width={48}
-                          handleDiameter={16}
-                        />
-                      </div>
+                      {[
+                        { label: "Move tile", permission: "moveTile" },
+                        {
+                          label: "Add/Remove tile",
+                          permission: "addRemoveTile",
+                        },
+                      ].map(({ label, permission }) => (
+                        <div
+                          key={permission}
+                          className="flex items-center justify-between space-x-2"
+                        >
+                          <span>{label}</span>
+                          <Switch
+                            onChange={() =>
+                              handleTogglePermission(
+                                permission as keyof typeof permissions
+                              )
+                            }
+                            checked={
+                              permissions[
+                                permission as keyof typeof permissions
+                              ]
+                            }
+                            offColor="#767577"
+                            onColor="#81b0ff"
+                            height={20}
+                            width={48}
+                            handleDiameter={16}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
