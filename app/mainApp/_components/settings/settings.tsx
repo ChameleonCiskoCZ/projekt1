@@ -48,6 +48,8 @@ const Settings: React.FC<UserInfo> = ({
   const db = getFirestore(firebase_app);
   const username = useAuth();
   const { notify } = useContext(NotificationContext);
+  const [isCreateRoleVisible, setIsCreateRoleVisible] = useState(false);
+  const [isBoardSectionVisible, setIsBoardSectionVisible] = useState(false);
 
   useEffect(() => {
     if (db && ownerUsername && workspaceId) {
@@ -190,7 +192,7 @@ const Settings: React.FC<UserInfo> = ({
   return (
     <div>
       <i
-        className="fas fa-cog cursor-pointer mt-0.5 p-2 rounded-xl text-xl hover:bg-gray-100"
+        className="fas fa-cog cursor-pointer mt-0.5 p-2 rounded-xl text-xl hover:bg-sky-100"
         onClick={handleOpenSettings}
       ></i>
 
@@ -208,8 +210,8 @@ const Settings: React.FC<UserInfo> = ({
                 <button
                   className={`${
                     activeTab === "Roles"
-                      ? "bg-sky-500 p-2 rounded-xl text-white font-bold"
-                      : "p-2 rounded-xl hover:bg-sky-300 font-bold"
+                      ? "bg-sky-200 p-2 rounded-xl font-bold"
+                      : "p-2 rounded-xl hover:bg-sky-100 font-bold"
                   }`}
                   onClick={() => setActiveTab("Roles")}
                 >
@@ -218,8 +220,8 @@ const Settings: React.FC<UserInfo> = ({
                 <button
                   className={`${
                     activeTab === "Members"
-                      ? "bg-sky-500 p-2 rounded-xl text-white font-bold"
-                      : "p-2 rounded-xl hover:bg-sky-300 font-bold"
+                      ? "bg-sky-200 p-2 rounded-xl font-bold"
+                      : "p-2 rounded-xl hover:bg-sky-100 font-bold"
                   }`}
                   onClick={() => setActiveTab("Members")}
                 >
@@ -227,31 +229,14 @@ const Settings: React.FC<UserInfo> = ({
                 </button>
               </div>
               <button
-                className="p-2 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-100"
+                className="fas fa-xmark py-1 px-1.5 text-2xl flex items-center justify-center rounded-xl hover:bg-sky-100"
                 onClick={handleCloseSettings}
-              >
-                ✖
-              </button>
+              ></button>
             </div>
             {activeTab === "Roles" && (
               <div className="flex p-3">
-                <div className="w-1/2 pr-5">
-                  <h2 className="text-lg font-bold text-center bg-sky-300 p-2 rounded-xl mb-2">
-                    Create New Role
-                  </h2>
-                  <input
-                    type="text"
-                    className="mt-2 resize-none rounded-xl p-2 w-full border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={newRoleName}
-                    onChange={(e) => setNewRoleName(e.target.value)}
-                  />
-                  <button
-                    className="p-2 mt-2 mb-5 bg-sky-500 text-white rounded-xl"
-                    onClick={handleCreateRole}
-                  >
-                    Create Role
-                  </button>
-                  <h2 className="text-lg font-bold text-center p-2 rounded-xl mb-2 bg-sky-300">
+                <div className="w-1/2 mr-5 border p-2 rounded-2xl">
+                  <h2 className="text-lg font-bold text-center p-2 bg-sky-300 rounded-xl mb-2 ">
                     Select Role
                   </h2>
                   {roles.map((role) => (
@@ -259,14 +244,14 @@ const Settings: React.FC<UserInfo> = ({
                       key={role.name}
                       className={`cursor-pointer p-2 rounded-xl flex justify-between items-center ${
                         selectedRole?.name === role.name
-                          ? "bg-sky-500  text-white"
-                          : "hover:bg-sky-300"
+                          ? "bg-sky-200  "
+                          : "hover:bg-sky-100"
                       } `}
                       onClick={() => handleSelectRole(role)}
                     >
                       <span>{role.name}</span>
                       <button
-                        className="p-2 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-100"
+                        className="p-2 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-sky-300"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemoveRole(role);
@@ -276,123 +261,168 @@ const Settings: React.FC<UserInfo> = ({
                       </button>
                     </div>
                   ))}
+                  <div>
+                    {isCreateRoleVisible ? (
+                      <div className="flex flex-col ">
+                        <input
+                          type="text"
+                          value={newRoleName}
+                          onChange={(e) => setNewRoleName(e.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              handleCreateRole();
+                            }
+                          }}
+                          autoFocus
+                          className="mt-2 border rounded-xl p-2"
+                        />
+                        <button
+                          onClick={handleCreateRole}
+                          className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsCreateRoleVisible(true)}
+                        className="w-full mt-2 rounded-xl p-2 bg-sky-100 hover:bg-sky-200 "
+                      >
+                        <span className="text-2xl">+</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {selectedRole && (
-                  <div className="w-1/2 flex flex-col pl-5">
-                    <h2 className="text-xl font-bold text-center mb-2 bg-sky-300 p-2 rounded-xl">
+                  <div className="w-1/2 flex flex-col p-2 border rounded-2xl">
+                    <h2 className="text-xl font-bold text-center bg-sky-300 mb-2 p-2 rounded-xl">
                       Permissions
                     </h2>
-                    <div className="flex flex-col items-stretch space-y-2">
-                      <h2 className="text-lg font-bold text-start">
-                        Member Settings
-                      </h2>
-                      {[
-                        {
-                          label: "Add/Remove Role",
-                          permission: "addRemoveRole",
-                        },
-                        {
-                          label: "Change permissions",
-                          permission: "changePermissions",
-                        },
-                      ].map(({ label, permission }) => (
-                        <div
-                          key={permission}
-                          className="flex items-center justify-between space-x-2"
-                        >
-                          <span>{label}</span>
-                          <Switch
-                            onChange={() =>
-                              handleTogglePermission(
-                                permission as keyof typeof permissions
-                              )
-                            }
-                            checked={
-                              permissions[
-                                permission as keyof typeof permissions
-                              ]
-                            }
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                      ))}
-                      <h2 className="text-lg font-bold text-start">Cards</h2>
-                      {[
-                        { label: "Move Card", permission: "moveCard" },
-                        {
-                          label: "Add/Remove Card",
-                          permission: "addRemoveCard",
-                        },
-                        { label: "Assign Cards", permission: "assignCard" },
-                      ].map(({ label, permission }) => (
-                        <div
-                          key={permission}
-                          className="flex items-center justify-between space-x-2"
-                        >
-                          <span>{label}</span>
-                          <Switch
-                            onChange={() =>
-                              handleTogglePermission(
-                                permission as keyof typeof permissions
-                              )
-                            }
-                            checked={
-                              permissions[
-                                permission as keyof typeof permissions
-                              ]
-                            }
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                      ))}
-                      <h2 className="text-lg font-bold text-start">Tiles</h2>
-                      {[
-                        { label: "Move tile", permission: "moveTile" },
-                        {
-                          label: "Add/Remove tile",
-                          permission: "addRemoveTile",
-                        },
-                      ].map(({ label, permission }) => (
-                        <div
-                          key={permission}
-                          className="flex items-center justify-between space-x-2"
-                        >
-                          <span>{label}</span>
-                          <Switch
-                            onChange={() =>
-                              handleTogglePermission(
-                                permission as keyof typeof permissions
-                              )
-                            }
-                            checked={
-                              permissions[
-                                permission as keyof typeof permissions
-                              ]
-                            }
-                            offColor="#767577"
-                            onColor="#81b0ff"
-                            height={20}
-                            width={48}
-                            handleDiameter={16}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    <button
+                      className={`w-full p-2 text-start text-lg font-bold rounded-xl mb-2 ${
+                        isBoardSectionVisible
+                          ? "bg-sky-200"
+                          : "hover:bg-sky-100"
+                      }`}
+                      onClick={() =>
+                        setIsBoardSectionVisible(!isBoardSectionVisible)
+                      }
+                    >
+                      Board
+                    </button>
+                    {isBoardSectionVisible && (
+                      <div className="flex flex-col items-stretch px-2 space-y-2">
+                        <h2 className="text-lg font-semibold text-start">
+                          Member Settings
+                        </h2>
+                        {[
+                          {
+                            label: "Add/Remove Role",
+                            permission: "addRemoveRole",
+                          },
+                          {
+                            label: "Change permissions",
+                            permission: "changePermissions",
+                          },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                        <h2 className="text-lg font-bold text-start">Cards</h2>
+                        {[
+                          { label: "Move Card", permission: "moveCard" },
+                          {
+                            label: "Add/Remove Card",
+                            permission: "addRemoveCard",
+                          },
+                          { label: "Assign Cards", permission: "assignCard" },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                        <h2 className="text-lg font-bold text-start">Tiles</h2>
+                        {[
+                          { label: "Move tile", permission: "moveTile" },
+                          {
+                            label: "Add/Remove tile",
+                            permission: "addRemoveTile",
+                          },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
             {activeTab === "Members" && (
               <div className="flex p-3">
-                <div className="w-1/2 pr-5">
+                <div className="w-1/2 p-2 border rounded-2xl mr-5">
                   <h2 className="text-lg font-bold text-center mb-2 p-2 bg-sky-300 rounded-xl">
                     Select Member
                   </h2>
@@ -401,8 +431,8 @@ const Settings: React.FC<UserInfo> = ({
                       key={member.username}
                       className={`cursor-pointer p-2 rounded-xl ${
                         selectedMember?.username === member.username
-                          ? "bg-sky-500  text-white"
-                          : "hover:bg-sky-300"
+                          ? "bg-sky-200  "
+                          : "hover:bg-sky-100"
                       } `}
                       onClick={() => handleSelectMember(member)}
                     >
@@ -411,7 +441,7 @@ const Settings: React.FC<UserInfo> = ({
                   ))}
                 </div>
                 {selectedMember && (
-                  <div className="w-1/2 pl-5">
+                  <div className="w-1/2 p-2 border rounded-2xl">
                     <h2 className="text-lg font-bold text-center mb-2 p-2 bg-sky-300 rounded-xl">
                       Assign Role
                     </h2>
@@ -420,8 +450,8 @@ const Settings: React.FC<UserInfo> = ({
                         key={role.name}
                         className={`cursor-pointer p-2 rounded-xl ${
                           selectedMember?.role === role.name
-                            ? "bg-sky-500  text-white"
-                            : "hover:bg-sky-300"
+                            ? "bg-sky-200  "
+                            : "hover:bg-sky-100"
                         } `}
                         onClick={() => handleAssignRole(role)}
                       >

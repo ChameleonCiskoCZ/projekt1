@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Member, Role } from "../mainApp/page";
 import { useSearchParams } from "next/navigation";
+import { useNavbar } from "./NavbarContext";
 
 interface NavbarProps {
   rightButtons: React.ReactNode;
@@ -13,10 +14,7 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
   const searchParams = useSearchParams();
     const workspaceId = searchParams.get("workspaceId");
-  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(() => {
-    const storedState = sessionStorage.getItem("isNavbarCollapsed");
-    return storedState !== null ? JSON.parse(storedState) : false;
-  });
+  const { isNavbarCollapsed, setIsNavbarCollapsed } = useNavbar();
 
   useEffect(() => {
     const storedState = sessionStorage.getItem("isNavbarCollapsed");
@@ -35,9 +33,9 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
     <div className="flex h-screen">
       {/* Left Sidebar */}
       <div
-        className={`flex flex-col space-y-4 bg-white shadow p-4 ${
+        className={`fixed top-0 left-0 flex flex-col space-y-4 bg-white shadow p-4 ${
           isNavbarCollapsed ? "w-16" : "w-48"
-        } h-full top-0 left-0 z-50 transition-width duration-300 sticky`}
+        }  h-screen z-50 transition-width duration-300`}
       >
         <button
           className="flex items-center justify-start p-2"
@@ -56,14 +54,14 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
         >
           <Link
             href={`/mainApp?workspaceId=${workspaceId}`}
-            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100"
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-sky-100"
           >
             <i className="fas fa-home text-xl"></i>
             {!isNavbarCollapsed && <span>Board</span>}
           </Link>
           <Link
             href={`/board?workspaceId=${workspaceId}`}
-            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100"
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-sky-100"
           >
             <i className="fas fa-bell text-xl"></i>
             {!isNavbarCollapsed && <span>Announcements</span>}
@@ -71,14 +69,14 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
 
           <Link
             href={`/chat?workspaceId=${workspaceId}`}
-            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100"
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-sky-100"
           >
             <i className="fas fa-message text-xl"></i>
             {!isNavbarCollapsed && <span>Chat</span>}
           </Link>
           <Link
             href="./workspaces"
-            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100"
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-sky-100"
           >
             <i className="fas fa-briefcase text-xl"></i>
             {!isNavbarCollapsed && <span>Workspaces</span>}

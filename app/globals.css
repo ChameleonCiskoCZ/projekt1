@@ -20,3 +20,15 @@
     transform: rotate(360deg);
   }
 }
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.highlight {
+  @apply bg-sky-200 rounded-xl transition-colors duration-500;
+}

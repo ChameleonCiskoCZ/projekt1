@@ -130,10 +130,8 @@ export const Tiles: React.FC<TilesProps> = ({
                             onClick={(event) =>
                               handleButtonClick(tile.id, event)
                             }
-                            className="fas fa-bars col-span-2 text-xl p-2 rounded-xl hover:bg-gray-100 justify-self-end box-content"
-                          >
-                            
-                          </button>
+                            className="fas fa-bars col-span-2 text-xl p-2 rounded-xl hover:bg-sky-100 justify-self-end box-content"
+                          ></button>
                         </div>
                         <div>
                           <Cards

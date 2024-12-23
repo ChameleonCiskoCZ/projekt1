@@ -21,18 +21,21 @@ import Settings from "../mainApp/_components/settings/settings";
 import ThreadList from "./components/ThreadList";
 import MessageList from "./components/MessageList";
 import MessageInput from "./components/MessageInput";
+import { useNavbar } from "../components/NavbarContext";
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   content: string;
   createdAt: string;
   sender: string;
+  replyTo?: ChatMessage;
 }
 
 export interface ChatThread {
   id: string;
   title: string;
   messages: ChatMessage[];
+  position: number;
 }
 
 export default function Chat() {
@@ -51,6 +54,10 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(
+    null
+  );
+  const { isNavbarCollapsed } = useNavbar();
 
   useEffect(() => {
     const storedUserRole = sessionStorage.getItem("userRole");
@@ -121,6 +128,14 @@ export default function Chat() {
                 ? data.createdAt.toDate().toISOString()
                 : new Date(data.createdAt).toISOString(),
             sender: data.sender,
+            replyTo: data.replyTo
+              ? {
+                  id: data.replyTo.id,
+                  sender: data.replyTo.sender,
+                  content: data.replyTo.content,
+                  createdAt: data.replyTo.createdAt,
+                }
+              : undefined,
           };
         });
         // Sort messages by createdAt
@@ -135,6 +150,7 @@ export default function Chat() {
       return () => unsubscribe();
     }
   }, [selectedThreadId, workspaceId, ownerUsername, db]);
+  
 
   const handleSendMessage = async () => {
     if (newMessage.trim() && selectedThreadId && workspaceId) {
@@ -143,6 +159,14 @@ export default function Chat() {
           content: newMessage,
           createdAt: Timestamp.fromDate(new Date()),
           sender: username,
+          replyTo: replyToMessage
+            ? {
+                id: replyToMessage.id,
+                sender: replyToMessage.sender,
+                content: replyToMessage.content,
+                createdAt: replyToMessage.createdAt,
+              }
+            : null,
         };
         if (workspaceId && ownerUsername) {
           await addDoc(
@@ -159,6 +183,7 @@ export default function Chat() {
             newChatMessage
           );
           setNewMessage("");
+          setReplyToMessage(null);
           messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
       } catch (error) {
@@ -168,23 +193,34 @@ export default function Chat() {
   };
 
   const handleAddThread = async () => {
-    if (newThreadTitle.trim() && workspaceId) {
+    if (newThreadTitle.trim() && workspaceId && ownerUsername) {
+      const threadsCollection = collection(
+        db,
+        "users",
+        ownerUsername,
+        "workspaces",
+        workspaceId,
+        "threads"
+      );
+
+      // Fetch current threads to determine the highest position
+      const threadsSnapshot = await getDocs(threadsCollection);
+      const threadsData = threadsSnapshot.docs.map(
+        (doc) => doc.data() as ChatThread
+      );
+      const highestPosition = threadsData.reduce(
+        (max, thread) => Math.max(max, thread.position || 0),
+        0
+      );
+
       const newThread = {
         title: newThreadTitle,
         messages: [],
+        position: highestPosition + 1,
       };
+
       if (workspaceId && ownerUsername) {
-        await addDoc(
-          collection(
-            db,
-            "users",
-            ownerUsername,
-            "workspaces",
-            workspaceId,
-            "threads"
-          ),
-          newThread
-        );
+        await addDoc(threadsCollection, newThread);
         setNewThreadTitle("");
       }
     }
@@ -266,16 +302,31 @@ export default function Chat() {
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Navbar rightButtons={rightButtons} />
-      <div className="flex max-h-screen pt-16 flex-1 p-4">
-        <ThreadList
-          threads={threads}
-          selectedThreadId={selectedThreadId}
-          handleSelectThread={handleSelectThread}
-          newThreadTitle={newThreadTitle}
-          setNewThreadTitle={setNewThreadTitle}
-          handleAddThread={handleAddThread}
-        />
-        <div className="flex-1 p-4 bg-white shadow rounded-2xl ml-4 relative">
+      <div className={`pt-16 ${
+          isNavbarCollapsed ? "ml-16" : "ml-48"
+        } transition-margin duration-300 flex max-h-screen flex-1 p-4`}>
+        <div
+          className={`w-full md:w-1/4 ${
+            selectedThreadId ? "hidden md:block" : ""
+          }`}
+        >
+          <ThreadList
+            threads={threads}
+            selectedThreadId={selectedThreadId}
+            handleSelectThread={handleSelectThread}
+            newThreadTitle={newThreadTitle}
+            setNewThreadTitle={setNewThreadTitle}
+            handleAddThread={handleAddThread}
+            ownerUsername={ownerUsername || ""}
+            workspaceId={workspaceId || ""}
+            setThreads={setThreads}
+          />
+        </div>
+        <div
+          className={`flex-1 p-4 bg-white shadow rounded-2xl md:ml-4 relative ${
+            !selectedThreadId ? "hidden md:block" : ""
+          }`}
+        >
           {selectedThreadId ? (
             <>
               {loading && (
@@ -288,11 +339,14 @@ export default function Chat() {
                   messages={messages}
                   handleScroll={handleScroll}
                   messagesEndRef={messagesEndRef}
+                  setReplyToMessage={setReplyToMessage}
                 />
                 <MessageInput
                   newMessage={newMessage}
                   setNewMessage={setNewMessage}
                   handleSendMessage={handleSendMessage}
+                  replyToMessage={replyToMessage}
+                  setReplyToMessage={setReplyToMessage}
                 />
               </div>
             </>

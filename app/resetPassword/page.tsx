@@ -62,8 +62,8 @@ export default function ResetPassword() {
             {successMessage && (
               <>
                 <div className="mt-4">
-                  <span className="inline-flex items-center justify-center text-5xl bg-green-200 rounded-full text-green-500 w-16 h-16">
-                    ✔
+                  <span className="fas fa-check inline-flex items-center justify-center text-3xl bg-green-200 rounded-full text-green-500 p-4">
+                    
                   </span>
                 </div>
                 <div className="text-green-500 mt-2">{successMessage}</div>
@@ -72,8 +72,8 @@ export default function ResetPassword() {
             {!successMessage && errorMessage && (
               <>
                 <div className="mt-4">
-                  <span className="inline-flex items-center justify-center text-5xl bg-red-200 rounded-full text-red-500 w-16 h-16">
-                    ✖
+                  <span className="fas fa-xmark inline-flex items-center justify-center text-3xl bg-red-200 rounded-full text-red-500 p-4">
+                    
                   </span>
                 </div>
                 <div className="text-red-500 mt-2">{errorMessage}</div>

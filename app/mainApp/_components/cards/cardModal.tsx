@@ -261,10 +261,10 @@ export const CardModal: React.FC<CardModalProps> = ({
                 }}
               />
               <button
-                className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-xl hover:bg-red-100"
+                className="fas fa-xmark m-1 py-1 px-1.5 ml-4 flex text-2xl items-center justify-center rounded-xl hover:bg-sky-100"
                 onClick={() => setIsModalOpen(false)}
               >
-                ✖
+                
               </button>
             </div>
             <div className="flex justify-between space-x-16 items-start">
@@ -331,10 +331,10 @@ export const CardModal: React.FC<CardModalProps> = ({
                       <div className="flex justify-between items-center font-bold text-lg mb-2">
                         <h2 className="text-xl font-bold p-2">Edit Time</h2>
                         <button
-                          className="m-1 p-4 ml-4 w-6 h-6 flex items-center justify-center rounded-xl hover:bg-red-100"
+                          className="fas fa-xmark py-1 mr-1 px-1.5 text-xl flex items-center justify-center rounded-xl hover:bg-sky-100"
                           onClick={() => setShowEditPopup(false)}
                         >
-                          ✖
+                          
                         </button>
                       </div>
                       <div className="flex space-x-2 mb-4 px-2 items-center">

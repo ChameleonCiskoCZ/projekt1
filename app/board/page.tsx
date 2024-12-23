@@ -6,13 +6,15 @@ import Navbar from "../components/Navbar";
 import Settings from "../mainApp/_components/settings/settings";
 import { Member, Role } from "../mainApp/page";
 import { useSearchParams } from "next/navigation";
+import { useNavbar } from "../components/NavbarContext";
 
 const NewsBoardPage: React.FC = () => {
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get("workspaceId");
  const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
  const [userRole, setUserRole] = useState<Role | null>(null);
- const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const { isNavbarCollapsed } = useNavbar();
 
   useEffect(() => {
     const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
@@ -45,7 +47,9 @@ const NewsBoardPage: React.FC = () => {
     return (
       <div className="min-h-screen flex bg-gray-100">
         <Navbar rightButtons={rightButtons} />
-        <div className="p-4 mt-16">
+        <div className={`mt-12 ${
+          isNavbarCollapsed ? "ml-16" : "ml-48"
+        } transition-margin duration-300 p-4`}>
           <h1 className="text-2xl font-bold mb-4">News Board</h1>
           <NewsBoard ownerUsername={ownerUsername} />
         </div>

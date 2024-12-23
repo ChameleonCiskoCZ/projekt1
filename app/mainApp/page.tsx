@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import Settings from "./_components/settings/settings";
 import InvoicePopup from "./_components/invoice/invoicePopup";
 import Navbar from "../components/Navbar";
+import { useNavbar } from "../components/NavbarContext";
 
 // Define the types for the cards and tiles
 export type Card = {
@@ -64,6 +65,7 @@ export default function MainApp() {
   const [showAssignedCards, setShowAssignedCards] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [isInvoicePopupOpen, setIsInvoicePopupOpen] = useState(false);
+  const { isNavbarCollapsed } = useNavbar();
   
   useEffect(() => {
     const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
@@ -242,21 +244,19 @@ export default function MainApp() {
        members={members}
      />
      <i
-       className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-gray-100"
+       className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-sky-100"
        onClick={() => setShowAssignedCards(!showAssignedCards)}
      ></i>
      <i
-       className="fas fa-file-invoice text-xl mt-0.5 cursor-pointer p-2 rounded-xl hover:bg-gray-100"
+       className="fas fa-file-invoice text-xl mt-0.5 cursor-pointer p-2 rounded-xl hover:bg-sky-100"
        onClick={() => setIsInvoicePopupOpen(true)}
      ></i>
    </>
  );
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Navbar
-        rightButtons={rightButtons}
-      />
+    <div className="min-h-max min-w-max bg-gray-100 flex">
+      <Navbar rightButtons={rightButtons} />
 
       <InvoicePopup
         tiles={tiles}
@@ -264,7 +264,11 @@ export default function MainApp() {
         onClose={() => setIsInvoicePopupOpen(false)}
       />
 
-      <div className="mt-12">
+      <div
+        className={`mt-12 ${
+          isNavbarCollapsed ? "ml-16" : "ml-48"
+        } transition-margin duration-300 p-2`}
+      >
         <Tiles
           tiles={tiles}
           setTiles={setTiles}

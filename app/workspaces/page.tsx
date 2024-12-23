@@ -415,7 +415,7 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen min-w-max bg-gray-100">
       <h1 className="text-2xl p-4 font-bold mb-4">Select a Workspace</h1>
       <div className="flex self-start">
         {workspaces.map((workspace) => (

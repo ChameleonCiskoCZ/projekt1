@@ -146,7 +146,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
           />
           <button
             onClick={handleCreatePost}
-            className="bg-sky-500 text-white p-2 rounded-xl"
+            className="bg-sky-200 hover:bg-sky-300 text-white p-2 rounded-xl"
           >
             Create Post
           </button>
