@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 interface NavbarContextProps {
   isNavbarCollapsed: boolean;
@@ -12,9 +12,21 @@ export const NavbarProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(() => {
-    const storedState = sessionStorage.getItem("isNavbarCollapsed");
-    return storedState !== null ? JSON.parse(storedState) : false;
+    if (typeof window !== "undefined") {
+      const storedState = sessionStorage.getItem("isNavbarCollapsed");
+      return storedState !== null ? JSON.parse(storedState) : false;
+    }
+    return false;
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "isNavbarCollapsed",
+        JSON.stringify(isNavbarCollapsed)
+      );
+    }
+  }, [isNavbarCollapsed]);
 
   return (
     <NavbarContext.Provider value={{ isNavbarCollapsed, setIsNavbarCollapsed }}>
