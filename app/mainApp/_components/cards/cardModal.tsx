@@ -1,12 +1,9 @@
 import { Card, Member, Role, Tile } from "../../page";
 import { useModal } from "../../_hooks/cards/useCardModal";
-import { Cards } from "./cards";
 import { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
-import { collection, doc, getDocs, getFirestore, updateDoc } from "firebase/firestore";
-import firebase_app from "@/firebase";
 import { useAuth } from "@/app/_hooks/useAuth";
 import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
-import { set } from "firebase/database";
+import { getFirestore, doc, updateDoc } from "firebase/firestore";
 
 interface CardModalProps {
   isModalOpen: boolean;
@@ -22,7 +19,6 @@ interface CardModalProps {
   ownerUsername: string;
 }
 
-
 export const CardModal: React.FC<CardModalProps> = ({
   tiles,
   handleRemoveCard,
@@ -37,14 +33,25 @@ export const CardModal: React.FC<CardModalProps> = ({
   userRole,
 }) => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const db = getFirestore(firebase_app);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [showEditPopup, setShowEditPopup] = useState(false);
+  const [editedTime, setEditedTime] = useState(selectedCard?.elapsedTime || 0);
+  const [editedHours, setEditedHours] = useState(0);
+  const [editedMinutes, setEditedMinutes] = useState(0);
+  const [editedSeconds, setEditedSeconds] = useState(0);
+  const [images, setImages] = useState<string[]>(selectedCard?.images || []);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const username = useAuth();
-  //const ownerUsername = sessionStorage.getItem("ownerUsername");
   const { notify } = useContext(NotificationContext);
-
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const trackingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const notificationIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(
+    new Map()
+  );
 
+  const { descriptionRef, nameRef } = useModal(selectedCard, isModalOpen);
+
+  // Handle click outside to close the dropdown
   const handleClickOutside = (event: MouseEvent) => {
     if (
       dropdownRef.current &&
@@ -61,13 +68,17 @@ export const CardModal: React.FC<CardModalProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedCard) {
+      setImages(selectedCard.images || []);
+    }
+  }, [selectedCard]);
+
+  // Handle assigning members to the card
   const handleAssignCard = async (memberUsername: string) => {
-    if (username !== ownerUsername) {
-      if (!userRole?.assignCard) {
-        console.log("You do not have permission to assign cards.");
-        notify("You do not have permission to assign cards.", "error");
-        return;
-      }
+    if (username !== ownerUsername && !userRole?.assignCard) {
+      notify("You do not have permission to assign cards.", "error");
+      return;
     }
     if (!selectedCard || !selectedTile || !ownerUsername) {
       return;
@@ -92,32 +103,11 @@ export const CardModal: React.FC<CardModalProps> = ({
       // Update the card directly
       card.assignedTo = updatedAssignedTo;
     }
-    /*
-    const cardRef = doc(
-      db,
-      "users",
-      ownerUsername,
-      "workspaces",
-      workspaceId,
-      "tiles",
-      selectedTile.id,
-      "cards",
-      selectedCard.id
-    );
 
-    await updateDoc(cardRef, {
-      assignedTo: updatedAssignedTo,
-    });*/
+    setSelectedCard({ ...selectedCard, assignedTo: updatedAssignedTo });
   };
-  const trackingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track card intervals
-  const notificationIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(
-    new Map()
-  );
-  const [showEditPopup, setShowEditPopup] = useState(false);
-  const [editedTime, setEditedTime] = useState(selectedCard?.elapsedTime || 0);
 
-  
-
+  // Handle tracking work time for the card
   const handleTrackButtonClick = (cardId: string) => {
     const currentIntervals = trackingIntervalsRef.current;
     const notificationIntervals = notificationIntervalsRef.current;
@@ -158,13 +148,14 @@ export const CardModal: React.FC<CardModalProps> = ({
           `Timer for card ${selectedCard?.name} is still running.`,
           "info"
         );
-      }, 5* 60 * 1000); // Notify every 5 minutes
+      }, 5 * 60 * 1000); // Notify every 5 minutes
 
       currentIntervals.set(cardId, timer);
       notificationIntervals.set(cardId, notificationTimer);
     }
   };
 
+  // Format time for display
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
@@ -174,6 +165,7 @@ export const CardModal: React.FC<CardModalProps> = ({
     }${seconds}`;
   };
 
+  // Handle timer click to edit time
   const handleTimerClick = () => {
     const elapsedTime = selectedCard?.elapsedTime || 0;
     setEditedTime(elapsedTime);
@@ -189,7 +181,11 @@ export const CardModal: React.FC<CardModalProps> = ({
     setShowEditPopup(true);
   };
 
-  const handleEditTimeChange = (e: ChangeEvent<HTMLInputElement>, unit: string) => {
+  // Handle edit time change
+  const handleEditTimeChange = (
+    e: ChangeEvent<HTMLInputElement>,
+    unit: string
+  ) => {
     const value = parseInt(e.target.value, 10);
     if (unit === "hours") {
       setEditedHours(value);
@@ -200,35 +196,96 @@ export const CardModal: React.FC<CardModalProps> = ({
     }
   };
 
-  const handleSaveTime2 = () => {
+  // Save edited time
+  const handleSaveTime = () => {
     const totalSeconds =
       editedHours * 3600 + editedMinutes * 60 + editedSeconds;
-    // Update the selected card's elapsed time with totalSeconds
-    // Assuming selectedCard has an elapsedTime property
     if (selectedCard) {
       selectedCard.elapsedTime = totalSeconds;
     }
     setShowEditPopup(false);
   };
 
-  const handleSaveTime = () => {
-    setSelectedCard((prevCard) => {
-      if (prevCard) {
-        return {
-          ...prevCard,
-          elapsedTime: editedTime,
-        };
+  // Handle image upload
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      if (images.length >= 9) {
+        notify("You can only upload up to 9 images.", "error");
+        return;
       }
-      return prevCard;
-    });
-    setShowEditPopup(false);
-  };
-  const [editedHours, setEditedHours] = useState(0);
-  const [editedMinutes, setEditedMinutes] = useState(0);
-  const [editedSeconds, setEditedSeconds] = useState(0);
-  
 
-  const { descriptionRef, nameRef } = useModal(selectedCard, isModalOpen);
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "jafaktnevimkamo"); // Replace with your Cloudinary upload preset
+
+      try {
+        const response = await fetch(
+          "https://api.cloudinary.com/v1_1/dsrfukgtq/image/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        const data = await response.json();
+        const newImageUrl = data.secure_url;
+
+        setImages((prevImages) => [...prevImages, newImageUrl]);
+        if (selectedCard) {
+          const updatedCard = {
+            ...selectedCard,
+            images: [...(selectedCard.images || []), newImageUrl],
+          };
+          setSelectedCard(updatedCard);
+
+          // Update the card in the tiles state
+          tiles.forEach((tile) => {
+            tile.cards.forEach((card) => {
+              if (card.id === selectedCard.id) {
+                card.images = updatedCard.images;
+              }
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        notify("Error uploading image. Please try again.", "error");
+      }
+    }
+  };
+
+  // Handle image removal
+  const handleRemoveImage = (imageUrl: string) => {
+    const updatedImages = images.filter((image) => image !== imageUrl);
+    setImages(updatedImages);
+    if (selectedCard) {
+      const updatedCard = {
+        ...selectedCard,
+        images: updatedImages,
+      };
+      setSelectedCard(updatedCard);
+
+      // Update the card in the tiles state
+      tiles.forEach((tile) => {
+        tile.cards.forEach((card) => {
+          if (card.id === selectedCard.id) {
+            card.images = updatedCard.images;
+          }
+        });
+      });
+    }
+  };
+
+  // Handle image click to enlarge
+  const handleImageClick = (image: string) => {
+    setEnlargedImage(image);
+  };
+
+  // Handle close enlarged image
+  const handleCloseEnlargedImage = () => {
+    setEnlargedImage(null);
+  };
+
   return (
     <div>
       {isModalOpen && selectedCard && selectedTile && (
@@ -240,7 +297,7 @@ export const CardModal: React.FC<CardModalProps> = ({
           }}
         >
           <div
-            className="bg-white  rounded-2xl p-2 shadow flex flex-col"
+            className="bg-white rounded-2xl p-2 shadow flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between space-x-40 items-center font-bold text-lg mb-2">
@@ -263,16 +320,14 @@ export const CardModal: React.FC<CardModalProps> = ({
               <button
                 className="fas fa-xmark m-1 py-1 px-1.5 ml-4 flex text-2xl items-center justify-center rounded-xl hover:bg-sky-100"
                 onClick={() => setIsModalOpen(false)}
-              >
-                
-              </button>
+              ></button>
             </div>
             <div className="flex justify-between space-x-16 items-start">
               <div className="p-2">
                 <label className="text-lg pl-1 font-bold">Description</label>
                 <textarea
                   ref={descriptionRef}
-                  className="mt-2 resize-none rounded-xl p-2 w-full overflow-hidden h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" // Added "resize-none" to prevent resizing
+                  className="mt-2 resize-none rounded-xl p-2 w-full overflow-hidden h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={selectedCard.description || ""}
                   onChange={(e) => {
                     setSelectedCard({
@@ -289,12 +344,44 @@ export const CardModal: React.FC<CardModalProps> = ({
                     });
                   }}
                 />
+                <div className="mt-4">
+                  <label className="text-lg pl-1 font-bold flex items-center">
+                    Images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="fileInput"
+                    />
+                    <label htmlFor="fileInput" className="cursor-pointer ml-2">
+                      <i className="fas fa-paperclip text-xl"></i>
+                    </label>
+                  </label>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {images.slice(0, 9).map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Uploaded ${index}`}
+                          className="w-32 h-32 object-cover cursor-pointer rounded-lg"
+                          onClick={() => handleImageClick(image)}
+                        />
+                        <button
+                          className="absolute top-0 right-0 m-1 p-1 text-gray-400 rounded-full"
+                          onClick={() => handleRemoveImage(image)}
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="flex flex-col mt-10">
                 <button
                   className="m-1 p-2 bg-red-300 hover:bg-red-500 text-white rounded-xl"
                   onClick={() => {
-                    // Add your remove logic here
                     handleRemoveCard(selectedTile.id, selectedCard.id);
                     setIsModalOpen(false);
                   }}
@@ -333,16 +420,14 @@ export const CardModal: React.FC<CardModalProps> = ({
                         <button
                           className="fas fa-xmark py-1 mr-1 px-1.5 text-xl flex items-center justify-center rounded-xl hover:bg-sky-100"
                           onClick={() => setShowEditPopup(false)}
-                        >
-                          
-                        </button>
+                        ></button>
                       </div>
                       <div className="flex space-x-2 mb-4 px-2 items-center">
                         <input
                           type="number"
                           value={editedHours}
                           onChange={(e) => handleEditTimeChange(e, "hours")}
-                          className="border p-2 rounded-xl w-16 text-center "
+                          className="border p-2 rounded-xl w-16 text-center"
                           placeholder="Hours"
                         />
                         <span>:</span>
@@ -365,7 +450,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                       <div className="flex justify-end">
                         <button
                           className="m-1 p-2 bg-blue-500 hover:bg-blue-700 text-white rounded-xl"
-                          onClick={handleSaveTime2}
+                          onClick={handleSaveTime}
                         >
                           Save
                         </button>
@@ -426,6 +511,18 @@ export const CardModal: React.FC<CardModalProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75"
+          onClick={handleCloseEnlargedImage}
+        >
+          <img
+            src={enlargedImage}
+            alt="Enlarged"
+            className="max-w-full max-h-full"
+          />
         </div>
       )}
     </div>

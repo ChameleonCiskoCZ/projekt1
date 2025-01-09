@@ -202,10 +202,10 @@ const Settings: React.FC<UserInfo> = ({
           onClick={handleCloseSettings}
         >
           <div
-            className="bg-white rounded-2xl p-2 shadow-lg flex flex-col w-3/6 h-3/6 overflow-auto"
+            className="bg-white rounded-2xl ml-24 mr-8 p-2 shadow-lg flex flex-col w-full max-w-4xl max-h-4xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start rounded-lg ">
+            <div className="flex justify-between items-start rounded-lg">
               <div className="flex p-3 justify-between space-x-4">
                 <button
                   className={`${
@@ -234,9 +234,9 @@ const Settings: React.FC<UserInfo> = ({
               ></button>
             </div>
             {activeTab === "Roles" && (
-              <div className="flex p-3">
-                <div className="w-1/2 mr-5 border p-2 rounded-2xl">
-                  <h2 className="text-lg font-bold text-center p-2 bg-sky-300 rounded-xl mb-2 ">
+              <div className="flex flex-col md:flex-row p-3">
+                <div className="w-full md:w-1/2 mr-0 md:mr-5 border p-2 rounded-2xl">
+                  <h2 className="text-lg font-bold text-center p-2 bg-sky-300 rounded-xl mb-2">
                     Select Role
                   </h2>
                   {roles.map((role) => (
@@ -244,9 +244,9 @@ const Settings: React.FC<UserInfo> = ({
                       key={role.name}
                       className={`cursor-pointer p-2 rounded-xl flex justify-between items-center ${
                         selectedRole?.name === role.name
-                          ? "bg-sky-200  "
+                          ? "bg-sky-200"
                           : "hover:bg-sky-100"
-                      } `}
+                      }`}
                       onClick={() => handleSelectRole(role)}
                     >
                       <span>{role.name}</span>
@@ -263,7 +263,7 @@ const Settings: React.FC<UserInfo> = ({
                   ))}
                   <div>
                     {isCreateRoleVisible ? (
-                      <div className="flex flex-col ">
+                      <div className="flex flex-col">
                         <input
                           type="text"
                           value={newRoleName}
@@ -286,7 +286,7 @@ const Settings: React.FC<UserInfo> = ({
                     ) : (
                       <button
                         onClick={() => setIsCreateRoleVisible(true)}
-                        className="w-full mt-2 rounded-xl p-2 bg-sky-100 hover:bg-sky-200 "
+                        className="w-full mt-2 rounded-xl p-2 bg-sky-100 hover:bg-sky-200"
                       >
                         <span className="text-2xl">+</span>
                       </button>
@@ -294,7 +294,7 @@ const Settings: React.FC<UserInfo> = ({
                   </div>
                 </div>
                 {selectedRole && (
-                  <div className="w-1/2 flex flex-col p-2 border rounded-2xl">
+                  <div className="w-full md:w-1/2 flex flex-col p-2 border rounded-2xl mt-4 md:mt-0">
                     <h2 className="text-xl font-bold text-center bg-sky-300 mb-2 p-2 rounded-xl">
                       Permissions
                     </h2>
@@ -421,8 +421,8 @@ const Settings: React.FC<UserInfo> = ({
               </div>
             )}
             {activeTab === "Members" && (
-              <div className="flex p-3">
-                <div className="w-1/2 p-2 border rounded-2xl mr-5">
+              <div className="flex flex-col md:flex-row p-3">
+                <div className="w-full md:w-1/2 p-2 border rounded-2xl mr-0 md:mr-5">
                   <h2 className="text-lg font-bold text-center mb-2 p-2 bg-sky-300 rounded-xl">
                     Select Member
                   </h2>
@@ -431,9 +431,9 @@ const Settings: React.FC<UserInfo> = ({
                       key={member.username}
                       className={`cursor-pointer p-2 rounded-xl ${
                         selectedMember?.username === member.username
-                          ? "bg-sky-200  "
+                          ? "bg-sky-200"
                           : "hover:bg-sky-100"
-                      } `}
+                      }`}
                       onClick={() => handleSelectMember(member)}
                     >
                       {member.username}
@@ -441,7 +441,7 @@ const Settings: React.FC<UserInfo> = ({
                   ))}
                 </div>
                 {selectedMember && (
-                  <div className="w-1/2 p-2 border rounded-2xl">
+                  <div className="w-full md:w-1/2 p-2 border rounded-2xl mt-4 md:mt-0">
                     <h2 className="text-lg font-bold text-center mb-2 p-2 bg-sky-300 rounded-xl">
                       Assign Role
                     </h2>
@@ -450,9 +450,9 @@ const Settings: React.FC<UserInfo> = ({
                         key={role.name}
                         className={`cursor-pointer p-2 rounded-xl ${
                           selectedMember?.role === role.name
-                            ? "bg-sky-200  "
+                            ? "bg-sky-200"
                             : "hover:bg-sky-100"
-                        } `}
+                        }`}
                         onClick={() => handleAssignRole(role)}
                       >
                         {role.name}

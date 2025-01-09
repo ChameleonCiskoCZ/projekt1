@@ -1,6 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { getFirestore, collection, getDocs, onSnapshot, doc, getDoc } from "firebase/firestore";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { Tiles } from "./_components/tiles/tiles";
 import { useHandleDrag } from "./_hooks/useHandleDrag";
@@ -23,6 +30,7 @@ export type Card = {
   description: string;
   assignedTo: string[];
   elapsedTime: number;
+  images?: string[];
 };
 
 export type Tile = {
@@ -53,9 +61,9 @@ export default function MainApp() {
   const db = getFirestore(firebase_app);
   const [removedTileIds, setRemovedTileIds] = useState<Set<string>>(new Set());
   const searchParams = useSearchParams();
-  const workspaceId = searchParams.get('workspaceId');
+  const workspaceId = searchParams.get("workspaceId");
   //const workspaceId = sessionStorage.getItem("workspaceId");
-  const [ownerUsername, setOwnerUsername] = useState<string | null>(null); 
+  const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
   //modal consts idk
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -66,7 +74,10 @@ export default function MainApp() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isInvoicePopupOpen, setIsInvoicePopupOpen] = useState(false);
   const { isNavbarCollapsed } = useNavbar();
-  
+
+  const [loading, setLoading] = useState(true);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
     const storedUserRole = sessionStorage.getItem("userRole");
@@ -83,113 +94,124 @@ export default function MainApp() {
     }
   }, []);
 
-
+  
 
 
   // Fetch tiles from Firebase on initial render
   useEffect(() => {
     const fetchTiles = async () => {
+      setLoading(true);
       if (ownerUsername && workspaceId) {
-        // Fetch the user's document from the users collection
-        const tileCollection = collection(
-          db,
-          "users",
-          ownerUsername,
-          "workspaces",
-          workspaceId,
-          "tiles"
-        );
-
-        // Set up a listener for data changes
-        const unsubscribe = onSnapshot(tileCollection, async (tileSnapshot) => {
-          const tiles = await Promise.all(
-            tileSnapshot.docs.map(async (doc) => {
-              const tileData = doc.data();
-              const cardCollection = collection(
-                tileCollection,
-                doc.id,
-                "cards"
-              );
-              const cardSnapshot = await getDocs(cardCollection);
-              const cards = cardSnapshot.docs.map(
-                (doc) => ({ id: doc.id, ...doc.data() } as Card)
-              );
-              return { id: doc.id, ...tileData, cards } as Tile;
-            })
+        try {
+          // Fetch the user's document from the users collection
+          const tileCollection = collection(
+            db,
+            "users",
+            ownerUsername,
+            "workspaces",
+            workspaceId,
+            "tiles"
           );
-          setTiles(tiles);
-        });
 
-        // Return the unsubscribe function to clean up the listener on component unmount
-        return unsubscribe;
+          // Set up a listener for data changes
+          const unsubscribe = onSnapshot(
+            tileCollection,
+            async (tileSnapshot) => {
+              const tiles = await Promise.all(
+                tileSnapshot.docs.map(async (doc) => {
+                  const tileData = doc.data();
+                  const cardCollection = collection(
+                    tileCollection,
+                    doc.id,
+                    "cards"
+                  );
+                  const cardSnapshot = await getDocs(cardCollection);
+                  const cards = cardSnapshot.docs.map(
+                    (doc) => ({ id: doc.id, ...doc.data() } as Card)
+                  );
+                  return { id: doc.id, ...tileData, cards } as Tile;
+                })
+              );
+              setTiles(tiles);
+              setLoading(false);
+            }
+          );
+
+          // Return the unsubscribe function to clean up the listener on component unmount
+          return unsubscribe;
+        } catch (error) {
+          console.error("Error fetching tiles:", error);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
       }
     };
 
     fetchTiles();
   }, [ownerUsername, workspaceId, db]);
 
-   useEffect(() => {
-     const fetchUserRole = () => {
-       if (ownerUsername && workspaceId && username) {
-         const memberRef = doc(
-           db,
-           "users",
-           ownerUsername,
-           "workspaces",
-           workspaceId,
-           "members",
-           username
-         );
-         const unsubscribeFromMember = onSnapshot(
-           memberRef,
-           (memberSnapshot) => {
-             const memberData = memberSnapshot.data();
-             if (memberData) {
-               const role = memberData.role;
-
-               // Fetch data from workspaceId, "roles", userRole
-               const roleRef = doc(
-                 db,
-                 "users",
-                 ownerUsername,
-                 "workspaces",
-                 workspaceId,
-                 "roles",
-                 role
-               );
-               const unsubscribeFromRole = onSnapshot(
-                 roleRef,
-                 (roleSnapshot) => {
-                   const roleData = roleSnapshot.data();
-                   setUserRole(roleData as Role);
-                   sessionStorage.setItem("userRole", JSON.stringify(roleData));
-                 }
-               );
-
-               // Return cleanup function for role snapshot
-               return () => unsubscribeFromRole();
-             }
-           }
-         );
-
-         // Return cleanup function for member snapshot
-         return () => unsubscribeFromMember();
-       }
-     };
-
-     // Call fetchUserRole and store cleanup function
-     const unsubscribe = fetchUserRole();
-
-     // Cleanup function for useEffect
-     return () => {
-       if (unsubscribe) {
-         unsubscribe();
-       }
-     };
-   }, [db, ownerUsername, workspaceId, username]);
-  
   useEffect(() => {
-    
+    const fetchUserRole = () => {
+      if (ownerUsername && workspaceId && username) {
+        const memberRef = doc(
+          db,
+          "users",
+          ownerUsername,
+          "workspaces",
+          workspaceId,
+          "members",
+          username
+        );
+        const unsubscribeFromMember = onSnapshot(
+          memberRef,
+          (memberSnapshot) => {
+            const memberData = memberSnapshot.data();
+            if (memberData) {
+              const role = memberData.role;
+
+              // Fetch data from workspaceId, "roles", userRole
+              const roleRef = doc(
+                db,
+                "users",
+                ownerUsername,
+                "workspaces",
+                workspaceId,
+                "roles",
+                role
+              );
+              const unsubscribeFromRole = onSnapshot(
+                roleRef,
+                (roleSnapshot) => {
+                  const roleData = roleSnapshot.data();
+                  setUserRole(roleData as Role);
+                  sessionStorage.setItem("userRole", JSON.stringify(roleData));
+                }
+              );
+
+              // Return cleanup function for role snapshot
+              return () => unsubscribeFromRole();
+            }
+          }
+        );
+
+        // Return cleanup function for member snapshot
+        return () => unsubscribeFromMember();
+      }
+    };
+
+    // Call fetchUserRole and store cleanup function
+    const unsubscribe = fetchUserRole();
+
+    // Cleanup function for useEffect
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [db, ownerUsername, workspaceId, username]);
+
+  useEffect(() => {
     const fetchMembers = async () => {
       if (ownerUsername && workspaceId) {
         const membersCollection = collection(
@@ -212,10 +234,13 @@ export default function MainApp() {
     fetchMembers();
   }, [db, ownerUsername, workspaceId]);
 
-  const { removedCardIds, setRemovedCardIds, handleRemoveCard } =
-    useRemoveCard(setTiles, userRole);
+  const { removedCardIds, setRemovedCardIds, handleRemoveCard } = useRemoveCard(
+    setTiles,
+    userRole
+  );
 
   //handle dragging
+
   const { handleDragEnd, isDragging, movedCards } = useHandleDrag(
     tiles,
     setTiles,
@@ -232,27 +257,38 @@ export default function MainApp() {
     movedCards,
     removedCardIds,
     setRemovedCardIds,
-    workspaceId || "" 
+    workspaceId || ""
   );
 
- const rightButtons = (
-   <>
-     <Settings
-       workspaceId={workspaceId || ""}
-       ownerUsername={ownerUsername || ""}
-       userRole={userRole as Role}
-       members={members}
-     />
-     <i
-       className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-sky-100"
-       onClick={() => setShowAssignedCards(!showAssignedCards)}
-     ></i>
-     <i
-       className="fas fa-file-invoice text-xl mt-0.5 cursor-pointer p-2 rounded-xl hover:bg-sky-100"
-       onClick={() => setIsInvoicePopupOpen(true)}
-     ></i>
-   </>
- );
+  useEffect(() => {
+    if (!loading && !isDragging) {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      debounceTimeout.current = setTimeout(() => {
+        handleSave();
+      }, 100); 
+    }
+  }, [tiles, selectedCard]);
+
+  const rightButtons = (
+    <>
+      <Settings
+        workspaceId={workspaceId || ""}
+        ownerUsername={ownerUsername || ""}
+        userRole={userRole as Role}
+        members={members}
+      />
+      <i
+        className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-sky-100"
+        onClick={() => setShowAssignedCards(!showAssignedCards)}
+      ></i>
+      <i
+        className="fas fa-file-invoice text-xl mt-0.5 cursor-pointer p-2 rounded-xl hover:bg-sky-100"
+        onClick={() => setIsInvoicePopupOpen(true)}
+      ></i>
+    </>
+  );
 
   return (
     <div className="min-h-max min-w-max bg-gray-100 flex">
@@ -284,15 +320,15 @@ export default function MainApp() {
       </div>
 
       <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
-        <button
+        {/*
+          <button
           disabled={isDragging}
           onClick={handleSave}
-          className={`p-4 w-40 mt-4 text-white rounded-2xl bg-green-400 ${
-            isDragging ? "cursor-not-allowed opacity-50" : ""
-          }`}
+          className={`p-4 w-40 mt-4 text-white rounded-2xl bg-green-400 ${isDragging ? "cursor-not-allowed opacity-50" : ""
+            }`}
         >
           Save
-        </button>
+        </button>*/}
       </div>
       <CardModal
         isModalOpen={isModalOpen}
