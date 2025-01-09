@@ -11,22 +11,22 @@ const NavbarContext = createContext<NavbarContextProps | undefined>(undefined);
 export const NavbarProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      const storedState = sessionStorage.getItem("isNavbarCollapsed");
-      return storedState !== null ? JSON.parse(storedState) : false;
-    }
-    return false;
-  });
+
+
+  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(
-        "isNavbarCollapsed",
-        JSON.stringify(isNavbarCollapsed)
-      );
+    const storedState = sessionStorage.getItem("isNavbarCollapsed");
+    if (storedState !== null) {
+      console.log("Restoring navbar state from sessionStorage:", storedState);
+      setIsNavbarCollapsed(JSON.parse(storedState));
     }
-  }, [isNavbarCollapsed]);
+  }, []);
+ /* const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(() => {
+    const storedState = sessionStorage.getItem("isNavbarCollapsed");
+    return storedState !== null ? JSON.parse(storedState) : false;
+  });*/
+
 
   return (
     <NavbarContext.Provider value={{ isNavbarCollapsed, setIsNavbarCollapsed }}>

@@ -11,6 +11,8 @@ import {
   startAfter,
   getDocs,
   Timestamp,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import Navbar from "../components/Navbar";
@@ -29,6 +31,12 @@ export interface ChatMessage {
   createdAt: string;
   sender: string;
   replyTo?: ChatMessage;
+  attachments?: Attachment[];
+}
+export interface Attachment {
+  name: string;
+  url: string;
+  type: string;
 }
 
 export interface ChatThread {
@@ -57,7 +65,46 @@ export default function Chat() {
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(
     null
   );
+  const [uploadedFiles, setUploadedFiles] = useState<Attachment[]>([]);
   const { isNavbarCollapsed } = useNavbar();
+
+  const handleFileUpload = async (files: FileList): Promise<Attachment[]> => {
+    const uploadedFiles: Attachment[] = [];
+    const cloudName = "dsrfukgtq"; // Replace with your Cloudinary cloud name
+    const uploadPreset = "jafaktnevimkamo"; // Replace with your Cloudinary upload preset
+
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const data = await response.json();
+        if (data.secure_url) {
+          uploadedFiles.push({
+            name: file.name,
+            url: data.secure_url,
+            type: file.type,
+          });
+        } else {
+          console.error("Error uploading file to Cloudinary:", data);
+        }
+      } catch (error) {
+        console.error("Error uploading file to Cloudinary:", error);
+      }
+    }
+
+    setUploadedFiles(uploadedFiles); // Store uploaded files in state
+    return uploadedFiles; // Return the uploaded files
+  };
 
   useEffect(() => {
     const storedUserRole = sessionStorage.getItem("userRole");
@@ -136,6 +183,7 @@ export default function Chat() {
                   createdAt: data.replyTo.createdAt,
                 }
               : undefined,
+            attachments: data.attachments || [],
           };
         });
         // Sort messages by createdAt
@@ -150,47 +198,74 @@ export default function Chat() {
       return () => unsubscribe();
     }
   }, [selectedThreadId, workspaceId, ownerUsername, db]);
-  
 
-  const handleSendMessage = async () => {
-    if (newMessage.trim() && selectedThreadId && workspaceId) {
+  const handleDeleteMessage = async (id: string) => {
+    if (selectedThreadId && workspaceId && ownerUsername) {
       try {
-        const newChatMessage = {
-          content: newMessage,
-          createdAt: Timestamp.fromDate(new Date()),
-          sender: username,
-          replyTo: replyToMessage
-            ? {
-                id: replyToMessage.id,
-                sender: replyToMessage.sender,
-                content: replyToMessage.content,
-                createdAt: replyToMessage.createdAt,
-              }
-            : null,
-        };
-        if (workspaceId && ownerUsername) {
-          await addDoc(
-            collection(
-              db,
-              "users",
-              ownerUsername,
-              "workspaces",
-              workspaceId,
-              "threads",
-              selectedThreadId,
-              "messages"
-            ),
-            newChatMessage
-          );
-          setNewMessage("");
-          setReplyToMessage(null);
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
+        await deleteDoc(
+          doc(
+            db,
+            "users",
+            ownerUsername,
+            "workspaces",
+            workspaceId,
+            "threads",
+            selectedThreadId,
+            "messages",
+            id
+          )
+        );
+        setMessages((prevMessages) =>
+          prevMessages.filter((message) => message.id !== id)
+        );
       } catch (error) {
-        console.error("Error sending message:", error);
+        console.error("Error deleting message:", error);
       }
     }
   };
+  
+
+   const handleSendMessage = async (attachments: Attachment[]) => {
+     if (newMessage.trim() && selectedThreadId && workspaceId) {
+       try {
+         const newChatMessage = {
+           content: newMessage,
+           createdAt: Timestamp.fromDate(new Date()),
+           sender: username,
+           replyTo: replyToMessage
+             ? {
+                 id: replyToMessage.id,
+                 sender: replyToMessage.sender,
+                 content: replyToMessage.content,
+                 createdAt: replyToMessage.createdAt,
+               }
+             : null,
+           attachments, // Include uploaded files in the message
+         };
+         if (workspaceId && ownerUsername) {
+           await addDoc(
+             collection(
+               db,
+               "users",
+               ownerUsername,
+               "workspaces",
+               workspaceId,
+               "threads",
+               selectedThreadId,
+               "messages"
+             ),
+             newChatMessage
+           );
+           setNewMessage("");
+           setReplyToMessage(null);
+           setUploadedFiles([]); // Clear uploaded files after sending the message
+           messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+         }
+       } catch (error) {
+         console.error("Error sending message:", error);
+       }
+     }
+   };
 
   const handleAddThread = async () => {
     if (newThreadTitle.trim() && workspaceId && ownerUsername) {
@@ -302,9 +377,11 @@ export default function Chat() {
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Navbar rightButtons={rightButtons} />
-      <div className={`pt-16 ${
+      <div
+        className={`pt-16 ${
           isNavbarCollapsed ? "ml-16" : "ml-48"
-        } transition-margin duration-300 flex max-h-screen flex-1 p-4`}>
+        } transition-margin duration-300 flex max-h-screen flex-1 p-4`}
+      >
         <div
           className={`w-full md:w-1/4 ${
             selectedThreadId ? "hidden md:block" : ""
@@ -340,6 +417,7 @@ export default function Chat() {
                   handleScroll={handleScroll}
                   messagesEndRef={messagesEndRef}
                   setReplyToMessage={setReplyToMessage}
+                  handleDeleteMessage={handleDeleteMessage}
                 />
                 <MessageInput
                   newMessage={newMessage}
@@ -347,6 +425,7 @@ export default function Chat() {
                   handleSendMessage={handleSendMessage}
                   replyToMessage={replyToMessage}
                   setReplyToMessage={setReplyToMessage}
+                  handleFileUpload={handleFileUpload}
                 />
               </div>
             </>
