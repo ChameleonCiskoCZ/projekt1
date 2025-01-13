@@ -202,7 +202,7 @@ export default function WorkspacePage() {
       const workspaceDoc = await getDoc(workspaceRef);
       const members = workspaceDoc.data()?.members;
       if (username !== workspaceDoc.data()?.owner) {
-        notify("Only owner can delete this workspace", "error")
+        notify("Only owner can delete this workspace", "error");
         return;
       }
 
@@ -227,6 +227,10 @@ export default function WorkspacePage() {
       }
 
       await deleteDoc(workspaceRef);
+      setWorkspaces((prevWorkspaces) =>
+        prevWorkspaces.filter((workspace) => workspace.id !== id)
+      );
+      notify("Workspace removed successfully", "success");
     }
   };
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(

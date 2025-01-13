@@ -50,7 +50,6 @@ const NewsBoardPage: React.FC = () => {
         <div className={`mt-12 ${
           isNavbarCollapsed ? "ml-16" : "ml-48"
         } transition-margin duration-300 p-4`}>
-          <h1 className="text-2xl font-bold mb-4">News Board</h1>
           <NewsBoard ownerUsername={ownerUsername} />
         </div>
       </div>

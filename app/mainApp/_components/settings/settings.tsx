@@ -198,7 +198,7 @@ const Settings: React.FC<UserInfo> = ({
 
       {isSettingsOpen && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+          className="fixed inset-0 flex items-center justify-center z-100 bg-black bg-opacity-50"
           onClick={handleCloseSettings}
         >
           <div

@@ -61,7 +61,7 @@ export const useSave = (
     if (isSaving.current) return; // Prevent concurrent saves
     isSaving.current = true;
 
-    notify("Saving...", "success");
+    //notify("Saving...", "success");
     const batch = writeBatch(db);
     if (ownerUsername) {
       const tileCollection = collection(
@@ -116,10 +116,10 @@ export const useSave = (
         await batch.commit();
         setRemovedTileIds(new Set());
         setRemovedCardIds({});
-        notify("Saved successfully!", "success");
+        //notify("Saved successfully!", "success");
       } catch (error) {
         console.error("Error saving data:", error);
-        notify("Error saving data. Please try again.", "error");
+        //notify("Error saving data. Please try again.", "error");
       } finally {
         isSaving.current = false;
       }

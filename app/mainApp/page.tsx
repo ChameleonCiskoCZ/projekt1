@@ -83,73 +83,90 @@ export default function MainApp() {
     const storedUserRole = sessionStorage.getItem("userRole");
     const storedMembers = sessionStorage.getItem("members");
 
-    if (storedOwnerUsername) {
-      setOwnerUsername(storedOwnerUsername);
-    }
-    if (storedUserRole) {
-      setUserRole(JSON.parse(storedUserRole));
-    }
-    if (storedMembers) {
-      setMembers(JSON.parse(storedMembers));
-    }
+   if (storedOwnerUsername && storedOwnerUsername !== "undefined") {
+     setOwnerUsername(storedOwnerUsername);
+   }
+   if (storedUserRole && storedUserRole !== "undefined") {
+     setUserRole(JSON.parse(storedUserRole));
+   }
+   if (storedMembers && storedMembers !== "undefined") {
+     setMembers(JSON.parse(storedMembers));
+   }
   }, []);
 
   
 
 
   // Fetch tiles from Firebase on initial render
-  useEffect(() => {
-    const fetchTiles = async () => {
-      setLoading(true);
-      if (ownerUsername && workspaceId) {
-        try {
-          // Fetch the user's document from the users collection
-          const tileCollection = collection(
-            db,
-            "users",
-            ownerUsername,
-            "workspaces",
-            workspaceId,
-            "tiles"
-          );
+ useEffect(() => {
+   const fetchTilesAndCards = async () => {
+     setLoading(true);
+     if (!ownerUsername || !workspaceId) {
+       setLoading(false);
+       return;
+     }
 
-          // Set up a listener for data changes
-          const unsubscribe = onSnapshot(
-            tileCollection,
-            async (tileSnapshot) => {
-              const tiles = await Promise.all(
-                tileSnapshot.docs.map(async (doc) => {
-                  const tileData = doc.data();
-                  const cardCollection = collection(
-                    tileCollection,
-                    doc.id,
-                    "cards"
-                  );
-                  const cardSnapshot = await getDocs(cardCollection);
-                  const cards = cardSnapshot.docs.map(
-                    (doc) => ({ id: doc.id, ...doc.data() } as Card)
-                  );
-                  return { id: doc.id, ...tileData, cards } as Tile;
-                })
-              );
-              setTiles(tiles);
-              setLoading(false);
-            }
-          );
+     try {
+       const tileCollection = collection(
+         db,
+         "users",
+         ownerUsername,
+         "workspaces",
+         workspaceId,
+         "tiles"
+       );
 
-          // Return the unsubscribe function to clean up the listener on component unmount
-          return unsubscribe;
-        } catch (error) {
-          console.error("Error fetching tiles:", error);
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
+       const unsubscribeTiles = onSnapshot(tileCollection, (tileSnapshot) => {
+         const tilePromises = tileSnapshot.docs.map(async (tileDoc) => {
+           const tileData = tileDoc.data();
+           const cardCollection = collection(tileDoc.ref, "cards");
 
-    fetchTiles();
-  }, [ownerUsername, workspaceId, db]);
+           const unsubscribeCards = onSnapshot(
+             cardCollection,
+             (cardSnapshot) => {
+               const cards = cardSnapshot.docs.map(
+                 (cardDoc) => ({ id: cardDoc.id, ...cardDoc.data() } as Card)
+               );
+
+               setTiles((prevTiles) => {
+                 const updatedTiles = prevTiles.map((tile) => {
+                   if (tile.id === tileDoc.id) {
+                     return { ...tile, cards };
+                   }
+                   return tile;
+                 });
+
+                 return updatedTiles;
+               });
+             }
+           );
+
+           return { id: tileDoc.id, name: tileData.name, position: tileData.position, cards: [], unsubscribeCards } as Tile;
+         });
+
+         Promise.all(tilePromises).then((tiles) => {
+           setTiles(tiles);
+           setLoading(false);
+         });
+       });
+
+       return () => {
+         unsubscribeTiles();
+         setTiles((prevTiles) => {
+           prevTiles.forEach((tile) => {
+             // No need to unsubscribe from cards as it is not part of the Tile type
+           });
+           return [];
+         });
+       };
+     } catch (error) {
+       console.error("Error fetching tiles and cards:", error);
+       setLoading(false);
+     }
+   };
+
+   fetchTilesAndCards();
+ }, [ownerUsername, workspaceId, db]);
 
   useEffect(() => {
     const fetchUserRole = () => {
@@ -170,27 +187,40 @@ export default function MainApp() {
             if (memberData) {
               const role = memberData.role;
 
-              // Fetch data from workspaceId, "roles", userRole
-              const roleRef = doc(
-                db,
-                "users",
-                ownerUsername,
-                "workspaces",
-                workspaceId,
-                "roles",
-                role
-              );
-              const unsubscribeFromRole = onSnapshot(
-                roleRef,
-                (roleSnapshot) => {
-                  const roleData = roleSnapshot.data();
-                  setUserRole(roleData as Role);
-                  sessionStorage.setItem("userRole", JSON.stringify(roleData));
-                }
-              );
+              if (role) {
+                // Fetch data from workspaceId, "roles", userRole
+                const roleRef = doc(
+                  db,
+                  "users",
+                  ownerUsername,
+                  "workspaces",
+                  workspaceId,
+                  "roles",
+                  role
+                );
+                const unsubscribeFromRole = onSnapshot(
+                  roleRef,
+                  (roleSnapshot) => {
+                    const roleData = roleSnapshot.data();
+                    if (roleData) {
+                      setUserRole(roleData as Role);
+                      sessionStorage.setItem(
+                        "userRole",
+                        JSON.stringify(roleData)
+                      );
+                    } else {
+                      setUserRole(null);
+                      sessionStorage.removeItem("userRole");
+                    }
+                  }
+                );
 
-              // Return cleanup function for role snapshot
-              return () => unsubscribeFromRole();
+                // Return cleanup function for role snapshot
+                return () => unsubscribeFromRole();
+              } else {
+                setUserRole(null);
+                sessionStorage.removeItem("userRole");
+              }
             }
           }
         );

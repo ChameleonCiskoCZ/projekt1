@@ -30,11 +30,36 @@ const NewsPost: React.FC<NewsPostProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-2xl shadow bg-white relative">
+    <div className="p-4 rounded-2xl relative bg-white border shadow mb-4">
+      <div className="absolute top-2 right-2">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="fas fa-bars text-xl p-2 rounded-xl hover:bg-gray-100"
+        ></button>
+        {menuOpen && (
+          <div className="absolute z-10 right-0 rounded-xl mt-2 w-32 bg-white border shadow-lg">
+            <button
+              onClick={() => {
+                setIsEditing(true);
+                setMenuOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(post.id)}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
       <div className="mb-2">
-        <strong>{post.creator}</strong>
+        <strong className="text-lg">{post.creator}</strong>
         <span className="text-sm text-gray-500 ml-2">
-          {post.createdAt.toLocaleDateString()} {" "}
+          {post.createdAt.toLocaleDateString()}{" "}
           {post.createdAt.toLocaleTimeString()}
         </span>
       </div>
@@ -46,43 +71,19 @@ const NewsPost: React.FC<NewsPostProps> = ({
           rows={4}
         />
       ) : (
-        <div className="overflow-wrap-anywhere ">{post.content}</div>
+        <div className="overflow-wrap-anywhere bg-sky-100 p-2 rounded-xl">
+          {post.content}
+        </div>
       )}
       <div className="flex justify-end space-x-2 mt-2">
         {isEditing ? (
           <button
             onClick={handleUpdate}
-            className="bg-blue-500 text-white p-2 rounded-xl"
+            className="bg-sky-100 text-white p-2 rounded-xl hover:bg-sky-200"
           >
             Save
           </button>
-        ) : (
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="fas fa-bars text-xl p-2 rounded-xl hover:bg-gray-100"
-            ></button>
-            {menuOpen && (
-              <div className="absolute z-10 right-0 rounded-xl mt-2 w-32 bg-white border shadow-lg">
-                <button
-                  onClick={() => {
-                    setIsEditing(true);
-                    setMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onDelete(post.id)}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

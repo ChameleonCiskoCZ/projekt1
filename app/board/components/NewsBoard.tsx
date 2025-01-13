@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import NewsPost from "./NewsPost";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/_hooks/useAuth";
-import { collection, addDoc, getDocs, query, getFirestore, orderBy, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, getFirestore, orderBy, doc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import firebase_app from "@/firebase";
 
 interface Post {
@@ -29,20 +29,20 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
   const db = getFirestore(firebase_app);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      if (ownerUsername && workspaceId) {
-        const q = query(
-          collection(
-            db,
-            "users",
-            ownerUsername,
-            "workspaces",
-            workspaceId,
-            "posts"
-          ),
-          orderBy("createdAt", "desc")
-        );
-        const querySnapshot = await getDocs(q);
+    if (ownerUsername && workspaceId) {
+      const q = query(
+        collection(
+          db,
+          "users",
+          ownerUsername,
+          "workspaces",
+          workspaceId,
+          "posts"
+        ),
+        orderBy("createdAt", "desc")
+      );
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const postsData: Post[] = [];
         querySnapshot.forEach((doc) => {
           postsData.push({
@@ -52,10 +52,10 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
           } as Post);
         });
         setPosts(postsData);
-      }
-    };
+      });
 
-    fetchPosts();
+      return () => unsubscribe();
+    }
   }, [workspaceId, ownerUsername, db]);
 
   const handleCreatePost = async () => {
@@ -133,7 +133,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
   };
 
   return (
-    <div className=" mx-auto max-w-screen-sm">
+    <div className="mx-auto max-w-screen-sm bg-white p-4 rounded-2xl shadow">
       {hasPermission && (
         <div className="mb-4">
           <h2 className="text-xl font-bold mb-2">Create New Post</h2>
@@ -146,7 +146,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
           />
           <button
             onClick={handleCreatePost}
-            className="bg-sky-200 hover:bg-sky-300 text-white p-2 rounded-xl"
+            className="bg-sky-100 hover:bg-sky-200 p-2 rounded-xl"
           >
             Create Post
           </button>

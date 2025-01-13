@@ -30,5 +30,8 @@
 }
 
 .highlight {
-  @apply bg-sky-200 rounded-xl transition-colors duration-500;
+  background-color: #bae6fd; /* bg-sky-200 */
+  border-radius: 0.75rem; /* rounded-xl */
+  transition-property: background-color; /* transition-colors */
+  transition-duration: 500ms; /* duration-500 */
 }
