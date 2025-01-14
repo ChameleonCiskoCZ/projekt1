@@ -21,7 +21,7 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
     if (storedState !== null) {
       setIsNavbarCollapsed(JSON.parse(storedState));
     }
-  }, []);
+  }, [setIsNavbarCollapsed]);
 
   const handleNavbarToggle = () => {
     const newState = !isNavbarCollapsed;

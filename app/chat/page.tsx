@@ -411,6 +411,10 @@ export default function Chat() {
                   <div className="loader"></div>
                 </div>
               )}
+              <div
+                className=" fas fa-arrow-left top-0 left-0 p-2 rounded-xl hover:bg-sky-100"
+                onClick={() => setSelectedThreadId(null)}
+              ></div>
               <div className="flex flex-col h-full">
                 <MessageList
                   messages={messages}

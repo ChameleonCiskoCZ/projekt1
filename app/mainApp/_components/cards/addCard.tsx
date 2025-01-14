@@ -37,7 +37,7 @@ export const AddCard: React.FC<AddCardProps> = ({
           />
           <button
             onClick={() => handleAddCard(tile.id)}
-            className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
+            className="mt-2 bg-sky-100 rounded-xl p-2 hover:bg-sky-200"
           >
             Save
           </button>

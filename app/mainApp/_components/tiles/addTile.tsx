@@ -59,7 +59,7 @@ export const AddTile: React.FC<AddTileProps> = ({
           <button
             ref={buttonRef}
             onClick={handleAddTile}
-            className="px-4 py-2 bg-blue-500 text-white rounded-xl w-full"
+            className="px-4 py-2 bg-sky-100 hover:bg-sky-200 rounded-xl w-full"
           >
             Add Tile
           </button>

@@ -202,7 +202,7 @@ const Settings: React.FC<UserInfo> = ({
           onClick={handleCloseSettings}
         >
           <div
-            className="bg-white rounded-2xl ml-24 mr-8 p-2 shadow-lg flex flex-col w-full max-w-4xl max-h-4xl"
+            className="bg-white rounded-2xl ml-24 mr-8 p-2 shadow-lg flex flex-col w-full max-w-4xl max-h-screen overflow-scroll "
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start rounded-lg">
