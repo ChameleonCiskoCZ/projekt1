@@ -56,6 +56,16 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages, messagesEndRef]);
 
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  const handleImageClick = (url: string) => {
+    setExpandedImage(url);
+  };
+
+  const handleCloseImage = () => {
+    setExpandedImage(null);
+  };
+
   console.log(messages);
   return (
     <div
@@ -63,7 +73,6 @@ const MessageList: React.FC<MessageListProps> = ({
       ref={scrollContainerRef}
       onScroll={customHandleScroll}
     >
-      
       <ul>
         {messages.map((message) => (
           <li
@@ -114,14 +123,15 @@ const MessageList: React.FC<MessageListProps> = ({
               {message.content}
             </p>
             {message.attachments && message.attachments.length > 0 && (
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {message.attachments.map((attachment, index) => (
                   <div key={index} className="mt-1">
                     {attachment.type.startsWith("image/") ? (
                       <img
                         src={attachment.url}
                         alt={attachment.name}
-                        className="max-w-full h-auto rounded-lg"
+                        className="w-32 h-32 object-cover rounded-lg cursor-pointer"
+                        onClick={() => handleImageClick(attachment.url)}
                       />
                     ) : (
                       <a
@@ -141,6 +151,18 @@ const MessageList: React.FC<MessageListProps> = ({
           </li>
         ))}
         <div ref={messagesEndRef} />
+        {expandedImage && (
+          <div
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50 p-16"
+            onClick={handleCloseImage}
+          >
+            <img
+              src={expandedImage}
+              alt="Expanded"
+              className="max-w-full max-h-full rounded-xl"
+            />
+          </div>
+        )}
       </ul>
       {showScrollDownButton && (
         <button

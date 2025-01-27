@@ -78,7 +78,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <i className="fas fa-paperclip"></i>
         </label>
         <input
-          className="w-full p-2 pl-12 pr-8 border rounded-full"
+          className="w-full p-2 pl-12 pr-8 border rounded-2xl"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSendMessageWrapper();
           }}
