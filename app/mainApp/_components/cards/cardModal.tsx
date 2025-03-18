@@ -51,7 +51,7 @@ export const CardModal: React.FC<CardModalProps> = ({
 
   const { descriptionRef, nameRef } = useModal(selectedCard, isModalOpen);
 
-  // Handle click outside to close the dropdown
+
   const handleClickOutside = (event: MouseEvent) => {
     if (
       dropdownRef.current &&
@@ -74,7 +74,7 @@ export const CardModal: React.FC<CardModalProps> = ({
     }
   }, [selectedCard]);
 
-  // Handle assigning members to the card
+
   const handleAssignCard = async (memberUsername: string) => {
     if (username !== ownerUsername && !userRole?.assignCard) {
       notify("You do not have permission to assign cards.", "error");
@@ -95,31 +95,29 @@ export const CardModal: React.FC<CardModalProps> = ({
       setSelectedMembers([...selectedMembers, memberUsername]);
     }
 
-    // Find the tile and card in the tiles array
+
     const tile = tiles.find((tile) => tile.id === selectedTile.id);
     const card = tile?.cards.find((card) => card.id === selectedCard.id);
 
     if (card) {
-      // Update the card directly
+
       card.assignedTo = updatedAssignedTo;
     }
 
     setSelectedCard({ ...selectedCard, assignedTo: updatedAssignedTo });
   };
 
-  // Handle tracking work time for the card
+
   const handleTrackButtonClick = (cardId: string) => {
     const currentIntervals = trackingIntervalsRef.current;
     const notificationIntervals = notificationIntervalsRef.current;
 
     if (currentIntervals.has(cardId)) {
-      // Stop tracking
       clearInterval(currentIntervals.get(cardId));
       clearInterval(notificationIntervals.get(cardId));
       currentIntervals.delete(cardId);
       notificationIntervals.delete(cardId);
     } else {
-      // Start tracking
       const timer = setInterval(() => {
         setSelectedCard((prevCard) => {
           if (prevCard && prevCard.id === cardId) {
@@ -128,7 +126,7 @@ export const CardModal: React.FC<CardModalProps> = ({
               elapsedTime: (prevCard.elapsedTime || 0) + 1,
             };
 
-            // Update the card in tiles array
+
             tiles.forEach((tile) => {
               tile.cards.forEach((card) => {
                 if (card.id === updatedCard.id) {
@@ -148,14 +146,13 @@ export const CardModal: React.FC<CardModalProps> = ({
           `Timer for card ${selectedCard?.name} is still running.`,
           "info"
         );
-      }, 5 * 60 * 1000); // Notify every 5 minutes
+      }, 5 * 60 * 1000); 
 
       currentIntervals.set(cardId, timer);
       notificationIntervals.set(cardId, notificationTimer);
     }
   };
 
-  // Format time for display
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
@@ -165,7 +162,6 @@ export const CardModal: React.FC<CardModalProps> = ({
     }${seconds}`;
   };
 
-  // Handle timer click to edit time
   const handleTimerClick = () => {
     const elapsedTime = selectedCard?.elapsedTime || 0;
     setEditedTime(elapsedTime);
@@ -181,7 +177,7 @@ export const CardModal: React.FC<CardModalProps> = ({
     setShowEditPopup(true);
   };
 
-  // Handle edit time change
+
   const handleEditTimeChange = (
     e: ChangeEvent<HTMLInputElement>,
     unit: string
@@ -196,7 +192,7 @@ export const CardModal: React.FC<CardModalProps> = ({
     }
   };
 
-  // Save edited time
+
   const handleSaveTime = () => {
     const totalSeconds =
       editedHours * 3600 + editedMinutes * 60 + editedSeconds;
@@ -206,7 +202,6 @@ export const CardModal: React.FC<CardModalProps> = ({
     setShowEditPopup(false);
   };
 
-  // Handle image upload
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       if (images.length >= 9) {
@@ -217,7 +212,7 @@ export const CardModal: React.FC<CardModalProps> = ({
       const file = e.target.files[0];
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "jafaktnevimkamo"); // Replace with your Cloudinary upload preset
+      formData.append("upload_preset", "jafaktnevimkamo"); 
 
       try {
         const response = await fetch(
@@ -238,7 +233,6 @@ export const CardModal: React.FC<CardModalProps> = ({
           };
           setSelectedCard(updatedCard);
 
-          // Update the card in the tiles state
           tiles.forEach((tile) => {
             tile.cards.forEach((card) => {
               if (card.id === selectedCard.id) {
@@ -254,7 +248,7 @@ export const CardModal: React.FC<CardModalProps> = ({
     }
   };
 
-  // Handle image removal
+
   const handleRemoveImage = (imageUrl: string) => {
     const updatedImages = images.filter((image) => image !== imageUrl);
     setImages(updatedImages);
@@ -265,7 +259,7 @@ export const CardModal: React.FC<CardModalProps> = ({
       };
       setSelectedCard(updatedCard);
 
-      // Update the card in the tiles state
+
       tiles.forEach((tile) => {
         tile.cards.forEach((card) => {
           if (card.id === selectedCard.id) {
@@ -276,12 +270,10 @@ export const CardModal: React.FC<CardModalProps> = ({
     }
   };
 
-  // Handle image click to enlarge
   const handleImageClick = (image: string) => {
     setEnlargedImage(image);
   };
 
-  // Handle close enlarged image
   const handleCloseEnlargedImage = () => {
     setEnlargedImage(null);
   };
@@ -297,17 +289,16 @@ export const CardModal: React.FC<CardModalProps> = ({
           }}
         >
           <div
-            className="bg-white rounded-2xl p-2 shadow flex flex-col"
+            className="bg-white rounded-2xl p-2 shadow flex flex-col w-full max-w-lg mx-2 overflow-y-auto max-h-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between space-x-40 items-center font-bold text-lg mb-2">
+            <div className="flex justify-between items-center font-bold text-lg mb-2">
               <textarea
                 ref={nameRef}
                 className="flex-grow resize-none p-0.5 pl-2 ml-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={selectedCard.name}
                 onChange={(e) => {
                   setSelectedCard({ ...selectedCard, name: e.target.value });
-                  // Find the card in the tiles state and update its name
                   tiles.forEach((tile) => {
                     tile.cards.forEach((card) => {
                       if (card.id === selectedCard.id) {
@@ -318,23 +309,22 @@ export const CardModal: React.FC<CardModalProps> = ({
                 }}
               />
               <button
-                className="fas fa-xmark m-1 py-1 px-1.5 ml-4 flex text-2xl items-center justify-center rounded-xl hover:bg-sky-100"
+                className="fas fa-xmark m-1 py-1 px-2 flex text-2xl items-center justify-center rounded-xl hover:bg-sky-100"
                 onClick={() => setIsModalOpen(false)}
               ></button>
             </div>
-            <div className="flex justify-between space-x-16 items-start">
-              <div className="p-2">
-                <label className="text-lg pl-1 font-bold">Description</label>
+            <div className="flex flex-col sm:flex-row justify-between p-2 items-start space-y-4 sm:space-y-0 sm:space-x-4">
+              <div className="w-full sm:w-2/3">
+                <label className="text-lg font-bold">Description</label>
                 <textarea
                   ref={descriptionRef}
-                  className="mt-2 resize-none rounded-xl p-2 w-full overflow-hidden h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-2 resize-none rounded-xl p-2 w-full h-20 border border-gray-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={selectedCard.description || ""}
                   onChange={(e) => {
                     setSelectedCard({
                       ...selectedCard,
                       description: e.target.value,
                     });
-                    // Find the card in the tiles state and update its description
                     tiles.forEach((tile) => {
                       tile.cards.forEach((card) => {
                         if (card.id === selectedCard.id) {
@@ -345,7 +335,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                   }}
                 />
                 <div className="mt-4">
-                  <label className="text-lg pl-1 font-bold flex items-center">
+                  <label className="text-lg font-bold flex items-center">
                     Images
                     <input
                       type="file"
@@ -364,7 +354,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                         <img
                           src={image}
                           alt={`Uploaded ${index}`}
-                          className="w-32 h-32 object-cover cursor-pointer rounded-lg"
+                          className="w-24 h-24 object-cover cursor-pointer rounded-lg"
                           onClick={() => handleImageClick(image)}
                         />
                         <button
@@ -378,7 +368,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col mt-10">
+              <div className="flex flex-col w-full sm:w-1/3 mt-4 sm:mt-0">
                 <button
                   className="m-1 p-2 bg-red-300 hover:bg-red-500 text-white rounded-xl"
                   onClick={() => {
@@ -412,13 +402,13 @@ export const CardModal: React.FC<CardModalProps> = ({
                     onClick={() => setShowEditPopup(false)}
                   >
                     <div
-                      className="bg-white rounded-2xl p-2 shadow flex flex-col"
+                      className="bg-white rounded-2xl p-4 shadow flex flex-col w-full max-w-lg mx-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex justify-between items-center font-bold text-lg mb-2">
-                        <h2 className="text-xl font-bold p-2">Edit Time</h2>
+                        <h2 className="text-xl font-bold">Edit Time</h2>
                         <button
-                          className="fas fa-xmark py-1 mr-1 px-1.5 text-xl flex items-center justify-center rounded-xl hover:bg-sky-100"
+                          className="fas fa-xmark py-1 px-2 text-xl flex items-center justify-center rounded-xl hover:bg-sky-100"
                           onClick={() => setShowEditPopup(false)}
                         ></button>
                       </div>

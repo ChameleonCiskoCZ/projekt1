@@ -56,7 +56,6 @@ const ThreadList: React.FC<ThreadListProps> = ({
   const onDragEnd = async (result: any) => {
     const { source, destination } = result;
 
-    // Ignore drops outside of a droppable area
     if (!destination) {
       return;
     }
@@ -65,12 +64,10 @@ const ThreadList: React.FC<ThreadListProps> = ({
     const [movedThread] = reorderedThreads.splice(source.index, 1);
     reorderedThreads.splice(destination.index, 0, movedThread);
 
-    // Update the position of each thread
     reorderedThreads.forEach((thread, index) => {
       thread.position = index;
     });
 
-    // Update positions in Firebase
     const batch = writeBatch(db);
     reorderedThreads.forEach((thread) => {
       const threadRef = doc(
@@ -86,7 +83,6 @@ const ThreadList: React.FC<ThreadListProps> = ({
     });
     await batch.commit();
 
-    // Update local state
     setThreads(reorderedThreads);
   };
 

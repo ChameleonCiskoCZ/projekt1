@@ -49,7 +49,7 @@ export const AddTile: React.FC<AddTileProps> = ({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
-                event.preventDefault(); // Prevent form submission
+                event.preventDefault();
                 handleAddTile();
               }
             }}

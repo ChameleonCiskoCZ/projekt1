@@ -34,7 +34,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleSendMessageWrapper = async () => {
     const attachments = selectedFiles ? await handleFileUpload(selectedFiles) : [];
     await handleSendMessage(attachments);
-    setSelectedFiles(null); // Clear selected files after sending the message
+    setSelectedFiles(null); 
   };
 
 

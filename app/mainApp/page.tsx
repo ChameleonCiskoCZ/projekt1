@@ -321,7 +321,7 @@ export default function MainApp() {
   );
 
   return (
-    <div className="min-h-max min-w-max bg-gray-100 flex">
+    <div className="min-h-screen min-w-max bg-gray-100 flex">
       <Navbar rightButtons={rightButtons} />
 
       <InvoicePopup
@@ -349,8 +349,8 @@ export default function MainApp() {
         />
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
-        {/*
+      {/*<div className="fixed bottom-0 left-0 w-full flex justify-center pb-4">
+        
           <button
           disabled={isDragging}
           onClick={handleSave}
@@ -358,8 +358,8 @@ export default function MainApp() {
             }`}
         >
           Save
-        </button>*/}
-      </div>
+        </button>
+      </div>*/}
       <CardModal
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}

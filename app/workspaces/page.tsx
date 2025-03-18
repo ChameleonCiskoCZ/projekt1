@@ -1,4 +1,3 @@
-// WorkspacePage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
 import {
@@ -18,10 +17,10 @@ import {
   DocumentData,
   query,
   where,
-} from "firebase/firestore"; // adjust the path according to your directory structure
+} from "firebase/firestore"; 
 import { useAuth } from "../_hooks/useAuth";
 import firebase_app from "@/firebase";
-//import { MainApp } from "../mainApp/page";
+
 import ReactDOM from "react-dom";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
@@ -37,7 +36,7 @@ type Workspace = {
     createdAt: string;
     usedBy?: string;
   }[];
-  members?: string[]; // Optional: List of usernames with access
+  members?: string[]; 
 };
 
 export default function WorkspacePage() {
@@ -94,7 +93,6 @@ export default function WorkspacePage() {
         }
       );
 
-      // Unsubscribe on component unmount to avoid memory leaks
       return () => {
         unsubscribeOwned();
         unsubscribeMemberships();
@@ -130,7 +128,7 @@ export default function WorkspacePage() {
       await setDoc(newWorkspaceRef, {
         id: newWorkspaceRef.id,
         name: newWorkspaceName,
-        invites: [], // Add the 'invites' property with an empty array
+        invites: [],
         owner: username,
       });
       setWorkspaces([
@@ -140,7 +138,7 @@ export default function WorkspacePage() {
           name: newWorkspaceName,
           invites: [],
           owner: username,
-        }, // Include the 'invites' property in the new workspace object
+        }, 
       ]);
       setNewWorkspaceName("");
       setIsClicked(false);
@@ -316,7 +314,6 @@ export default function WorkspacePage() {
           invites: arrayUnion(inviteData),
         });
         console.log("Invite code generated:", newInviteCode);
-        // Display the invite code to the user
       } catch (error) {
         console.error("Error creating invite:", error);
       }
@@ -324,23 +321,18 @@ export default function WorkspacePage() {
   };
   const handleJoinWorkspace = async (inviteCode: string) => {
     if (username) {
-      const usersRef = collection(db, "users"); // Reference to users collection
+      const usersRef = collection(db, "users"); 
 
-      // Get all user documents
       const querySnapshot = await getDocs(usersRef);
 
       querySnapshot.forEach(async (userDoc) => {
-        // Access the workspaces subcollection within the user document
         const workspacesRef = collection(userDoc.ref, "workspaces");
-
-        // Get all workspaces for the user
         const workspaceQuerySnapshot = await getDocs(workspacesRef);
 
         workspaceQuerySnapshot.forEach(async (workspaceDoc) => {
           const workspaceData = workspaceDoc.data() as Workspace;
-          console.log("Checking workspace:", workspaceData.id); // Log workspace ID
+          console.log("Checking workspace:", workspaceData.id); 
 
-          // Check if "invites" property exists before accessing it
           if (workspaceData.invites) {
             const matchingInvite = workspaceData.invites.find(
               (invite) => invite.code === inviteCode
@@ -358,10 +350,9 @@ export default function WorkspacePage() {
                 );
                 try {
                   await updateDoc(workspaceRef, {
-                    //members: arrayUnion(username), // Add user to workspace members
-                    invites: arrayRemove({ code: inviteCode }), // Remove used invite code
+                    //members: arrayUnion(username), 
+                    invites: arrayRemove({ code: inviteCode }), 
                   });
-                  // Save member in new collection
                   const memberDocRef = doc(
                     db,
                     "users",
@@ -537,7 +528,7 @@ export default function WorkspacePage() {
                 onChange={(e) => setNewWorkspaceName(e.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
-                    event.preventDefault(); // Prevent form submission
+                    event.preventDefault();
                     handleCreateWorkspace();
                   }
                 }}

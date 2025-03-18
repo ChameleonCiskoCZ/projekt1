@@ -81,6 +81,13 @@ const Navbar: React.FC<NavbarProps> = ({ rightButtons }) => {
             <i className="fas fa-briefcase text-xl"></i>
             {!isNavbarCollapsed && <span>Workspaces</span>}
           </Link>
+          <Link
+            href={`/assignView?workspaceId=${workspaceId}`}
+            className=" flex items-center space-x-2 p-2 rounded-xl hover:bg-sky-100"
+          >
+            <i className="fas fa-user text-xl"></i>
+            {!isNavbarCollapsed && <span>Members</span>}
+          </Link>
         </div>
       </div>
 

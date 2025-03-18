@@ -70,8 +70,8 @@ export default function Chat() {
 
   const handleFileUpload = async (files: FileList): Promise<Attachment[]> => {
     const uploadedFiles: Attachment[] = [];
-    const cloudName = "dsrfukgtq"; // Replace with your Cloudinary cloud name
-    const uploadPreset = "jafaktnevimkamo"; // Replace with your Cloudinary upload preset
+    const cloudName = "dsrfukgtq"; 
+    const uploadPreset = "jafaktnevimkamo"; 
 
     for (const file of Array.from(files)) {
       const formData = new FormData();
@@ -102,8 +102,8 @@ export default function Chat() {
       }
     }
 
-    setUploadedFiles(uploadedFiles); // Store uploaded files in state
-    return uploadedFiles; // Return the uploaded files
+    setUploadedFiles(uploadedFiles);
+    return uploadedFiles; 
   };
 
   useEffect(() => {
@@ -186,7 +186,6 @@ export default function Chat() {
             attachments: data.attachments || [],
           };
         });
-        // Sort messages by createdAt
         messagesData.sort(
           (a, b) =>
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -240,7 +239,7 @@ export default function Chat() {
                  createdAt: replyToMessage.createdAt,
                }
              : null,
-           attachments, // Include uploaded files in the message
+           attachments,
          };
          if (workspaceId && ownerUsername) {
            await addDoc(
@@ -258,7 +257,7 @@ export default function Chat() {
            );
            setNewMessage("");
            setReplyToMessage(null);
-           setUploadedFiles([]); // Clear uploaded files after sending the message
+           setUploadedFiles([]); 
            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
          }
        } catch (error) {
@@ -278,7 +277,7 @@ export default function Chat() {
         "threads"
       );
 
-      // Fetch current threads to determine the highest position
+
       const threadsSnapshot = await getDocs(threadsCollection);
       const threadsData = threadsSnapshot.docs.map(
         (doc) => doc.data() as ChatThread
@@ -353,7 +352,7 @@ export default function Chat() {
         });
         setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
         setLoading(false);
-      }, 1000); // Add a delay of 1 second
+      }, 1000); 
     }
   };
 

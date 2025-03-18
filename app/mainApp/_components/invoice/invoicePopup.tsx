@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Tile, Card } from "../../page"; // Adjust the path according to your directory structure
+import { Tile, Card } from "../../page";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -47,6 +47,16 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
     logoWidth: 0,
     logoHeight: 0,
   });
+  const [expandedSections, setExpandedSections] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  const toggleSection = (tileId: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [tileId]: !prev[tileId],
+    }));
+  };
 
   const handleCardSelection = (card: Card) => {
     setSelectedCards((prev) =>
@@ -182,7 +192,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
     let startX = 20;
     headers.forEach((header, index) => {
       doc.text(header, startX, 120);
-      startX += index === 0 ? 80 : index === 1 ? 20 : 40; // Adjust spacing for each column
+      startX += index === 0 ? 80 : index === 1 ? 20 : 40; // spacing for each column
     });
     doc.line(20, 130, 190, 130); // Line after table header
 
@@ -200,15 +210,15 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
       startX = 20;
       row.forEach((text, index) => {
         doc.text(String(text), startX, rowY);
-        startX += index === 0 ? 100 : 20; // Adjust for wider first column
+        startX += index === 0 ? 100 : 20; //  first column
       });
       rowY += 10;
       doc.line(20, rowY - 5, 190, rowY - 5); // Line after each row
     });
 
-    finalY = rowY; // Update finalY based on last row position
+    finalY = rowY; //  finalY based on last row position
 
-    // Add summary box
+    //  summary box
     doc.line(130, finalY, 190, finalY); // Top line of summary box
     doc.line(130, finalY, 130, finalY + 20); // Left line of summary box
     doc.line(190, finalY, 190, finalY + 20); // Right line of summary box
@@ -219,14 +229,14 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
     );
     doc.text(`Total: ${totalAmount.toFixed(2)} CZK`, 135, finalY + 10);
 
-    // Add supplier sign box
+    // supplier sign box
     doc.line(20, finalY, 80, finalY); // Top line of sign box
     doc.line(20, finalY, 20, finalY + 40); // Left line of sign box
     doc.line(80, finalY, 80, finalY + 40); // Right line of sign box
     doc.line(20, finalY + 40, 80, finalY + 40); // Bottom line of sign box
     doc.text("Supplier Sign", 25, finalY + 10);
 
-    // Add note section
+    //  note section
     doc.setFont("helvetica", "bold");
     doc.text("Note:", 20, finalY + 50);
     doc.setFont("helvetica", "normal");
@@ -241,97 +251,119 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
   return (
     <>
       <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar mx-2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Create Invoice</h2>
             <button
-              className="text-red-500 hover:text-red-700"
+              className="fas fa-xmark m-1 py-1 px-2 text-2xl items-center justify-center rounded-xl hover:bg-sky-100"
               onClick={onClose}
-            >
-              ✖
-            </button>
+            ></button>
           </div>
 
           {/* Supplier Info */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <h3 className="text-lg font-bold mb-2">Supplier Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label>Name:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name:
+                  </label>
                   <input
                     name="supplierName"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Address:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Address:
+                  </label>
                   <input
                     name="supplierAddress"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Postal Code:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Postal Code:
+                  </label>
                   <input
                     name="supplierPostal"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>City:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    City:
+                  </label>
                   <input
                     name="supplierCity"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Country:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Country:
+                  </label>
                   <input
                     name="supplierCountry"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Court Registration:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Court Registration:
+                  </label>
                   <input
                     name="supplierCourt"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
                 </div>
                 <div>
-                  <label>ID:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    ID:
+                  </label>
                   <input
                     name="supplierID"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Bank Account:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Bank Account:
+                  </label>
                   <input
                     name="bankAccount"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Bank Name:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Bank Name:
+                  </label>
                   <input
                     name="bankName"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>IBAN:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    IBAN:
+                  </label>
                   <input
                     name="IBAN"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>SWIFT:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    SWIFT:
+                  </label>
                   <input
                     name="SWIFT"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Company Logo:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Company Logo:
+                  </label>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
-                    className="border p-2 rounded w-full"
+                    className="border p-2 rounded-xl w-full"
                   />
                 </div>
               </div>
@@ -340,51 +372,65 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
             {/* Client Info */}
             <div>
               <h3 className="text-lg font-bold mb-2">Client Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label>Name:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name:
+                  </label>
                   <input
                     name="clientName"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Address:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Address:
+                  </label>
                   <input
                     name="clientAddress"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Postal Code:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Postal Code:
+                  </label>
                   <input
                     name="clientPostal"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>City:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    City:
+                  </label>
                   <input
                     name="clientCity"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Country:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Country:
+                  </label>
                   <input
                     name="clientCountry"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
                 </div>
                 <div>
-                  <label>ID:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    ID:
+                  </label>
                   <input
                     name="clientID"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>VAT:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    VAT:
+                  </label>
                   <input
                     name="clientVAT"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
                 </div>
               </div>
@@ -392,44 +438,54 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
           </div>
 
           {/* Invoice Info */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <h3 className="text-lg font-bold mb-2">Invoice Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label>Invoice Number:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Invoice Number:
+                  </label>
                   <input
                     name="invoiceNumber"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Issue Date:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Issue Date:
+                  </label>
                   <input
                     name="issueDate"
                     type="date"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
                 </div>
                 <div>
-                  <label>Due Date:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Due Date:
+                  </label>
                   <input
                     name="dueDate"
                     type="date"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Payment Type:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Payment Type:
+                  </label>
                   <input
                     name="paymentType"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
-                  <label>Payment Symbol:</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Payment Symbol:
+                  </label>
                   <input
                     name="paymentSymbol"
                     onChange={handleInputChange}
-                    className="border p-2 rounded w-full mb-2"
+                    className="border p-2 rounded-xl w-full mb-2"
                   />
                 </div>
               </div>
@@ -439,28 +495,54 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
           {/* Item Selection */}
           <div className="mb-4">
             <h3 className="text-lg font-bold mb-2">Select Items</h3>
-            {tiles.map((tile) =>
-              tile.cards.map((card) => (
-                <div key={card.id} className="flex items-center mb-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedCards.includes(card)}
-                    onChange={() => handleCardSelection(card)}
-                    className="mr-2"
-                  />
-                  <span className="mr-2">{card.name}</span>
-                  <input
-                    type="number"
-                    placeholder="Price"
-                    value={cardPrices[card.id] || ""}
-                    onChange={(e) =>
-                      handlePriceChange(card.id, parseFloat(e.target.value))
-                    }
-                    className="border p-2 rounded w-24"
-                  />
+            {tiles.map((tile) => (
+              <div key={tile.id} className="mb-2">
+                <h4
+                  className="text-md font-semibold mb-2 cursor-pointer hover:bg-sky-100 p-2 rounded-xl flex items-center justify-between"
+                  onClick={() => toggleSection(tile.id)}
+                >
+                  {tile.name}
+                  <span
+                    className={`ml-2 transform transition-transform duration-300 ${
+                      expandedSections[tile.id] ? "rotate-180" : "rotate-0"
+                    }`}
+                  >
+                    ▼
+                  </span>
+                </h4>
+                <div
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    expandedSections[tile.id] ? "max-h-screen" : "max-h-0"
+                  }`}
+                >
+                  {tile.cards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="flex items-center mb-2 p-2 rounded-xl"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCards.includes(card)}
+                        onChange={() => handleCardSelection(card)}
+                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="mr-2 text-sm font-medium text-gray-700">
+                        {card.name}
+                      </span>
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        value={cardPrices[card.id] || ""}
+                        onChange={(e) =>
+                          handlePriceChange(card.id, parseFloat(e.target.value))
+                        }
+                        className="border p-2 rounded-xl w-24"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
 
           {/* Note Section */}
@@ -469,7 +551,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
             <textarea
               name="note"
               onChange={handleInputChange}
-              className="border p-2 rounded w-full"
+              className="border p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
             />
           </div>
@@ -477,13 +559,13 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
           {/* Export and Close Buttons */}
           <div className="flex justify-end space-x-2">
             <button
-              className="bg-blue-500 text-white p-2 rounded"
+              className="bg-sky-100 hover:bg-sky-200 p-2 rounded-xl"
               onClick={handleExportPDF}
             >
               Export PDF
             </button>
             <button
-              className="bg-red-500 text-white p-2 rounded"
+              className="bg-red-100 hover:bg-red-200 p-2 rounded-xl"
               onClick={onClose}
             >
               Cancel

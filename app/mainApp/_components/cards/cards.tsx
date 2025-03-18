@@ -5,7 +5,7 @@ import { useAuth } from "@/app/_hooks/useAuth";
 
 interface CardsComponentProps {
   tile: Tile;
-  setSelectedTile: (tile: Tile | null) => void; // Added missing property
+  setSelectedTile: (tile: Tile | null) => void;
   setSelectedCard: (card: Card | null) => void;
   setIsModalOpen: (isOpen: boolean) => void;
   showAssignedCards: boolean;
@@ -19,13 +19,12 @@ export const Cards: React.FC<CardsComponentProps> = ({
   showAssignedCards,
 }) => {
   const username = useAuth();
-  // Updated parameter name
   return (
     <Droppable droppableId={`tile-${tile.id}`} type="card">
       {(provided) => (
         <div {...provided.droppableProps} ref={provided.innerRef}>
           {tile.cards
-            .sort((a, b) => a.position - b.position) // Sort the cards by position
+            .sort((a, b) => a.position - b.position)
             .filter(
               (card) =>
                 !showAssignedCards || card.assignedTo?.includes(username ?? "")

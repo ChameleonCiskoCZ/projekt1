@@ -1,4 +1,4 @@
-import { RefObject, useRef } from "react";
+import { RefObject, useEffect, useRef, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { AddTile } from "./addTile";
 import { Cards } from "../cards/cards";
@@ -76,13 +76,29 @@ export const Tiles: React.FC<TilesProps> = ({
     handleAddCardClick,
     handleAddCard,
   } = useAddCard(tiles, setTiles, userRole);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth <= 640); // Adjust the breakpoint as needed
+    };
+
+    handleResize(); // Set initial value
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="all-tiles" direction="horizontal" type="tile">
+      <Droppable
+        droppableId="all-tiles"
+        direction={isSmallScreen ? "vertical" : "horizontal"}
+        type="tile"
+      >
         {(provided) => (
           <div
-            className="flex"
+            className="sm:flex flex-wrap justify-center"
             {...provided.droppableProps}
             ref={provided.innerRef}
           >
@@ -98,7 +114,6 @@ export const Tiles: React.FC<TilesProps> = ({
                         {...provided.dragHandleProps}
                         className="p-2 bg-white flex-shrink-0 rounded-2xl shadow m-2 w-64 relative flex flex-col self-start"
                       >
-                        {/* Add the ref to the button */}
                         <div className="grid grid-cols-12 gap-2 items-start">
                           <div className="col-span-10">
                             {editingTileId === tile.id ? (
