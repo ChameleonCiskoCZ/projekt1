@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "../page";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 
 
@@ -22,6 +23,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const isUserAtBottom = useRef(true);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
   const messageRefs = useRef<{ [key: string]: HTMLLIElement | null }>({});
+  const username = useAuth();
 
   const customHandleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (scrollContainerRef.current) {
@@ -66,7 +68,6 @@ const MessageList: React.FC<MessageListProps> = ({
     setExpandedImage(null);
   };
 
-  console.log(messages);
   return (
     <div
       className="relative flex-1 overflow-y-auto min-w-0"
@@ -87,19 +88,21 @@ const MessageList: React.FC<MessageListProps> = ({
                   {new Date(message.createdAt).toLocaleString()}
                 </span>
               </div>
-              <div className="absolute top-0 right-0 mt-1 hidden group-hover:flex space-x-2">
+              <div className="absolute top-0 right-0 mt-1 hidden group-hover:flex space-x-2 mr-2">
                 <button
                   className="text-gray-500 hover:text-gray-700"
                   onClick={() => setReplyToMessage(message)}
                 >
                   <i className="fas fa-reply"></i>
                 </button>
-                <button
-                  className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDeleteMessage(message.id)}
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
+                {message.sender === username && (
+                  <button
+                    className="text-red-500 hover:text-red-700"
+                    onClick={() => handleDeleteMessage(message.id)}
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                )}
               </div>
             </div>
             {message.replyTo && (

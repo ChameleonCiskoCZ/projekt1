@@ -44,6 +44,7 @@ export interface ChatThread {
   title: string;
   messages: ChatMessage[];
   position: number;
+  allowedRoles: string[];
 }
 
 export default function Chat() {
@@ -67,6 +68,80 @@ export default function Chat() {
   );
   const [uploadedFiles, setUploadedFiles] = useState<Attachment[]>([]);
   const { isNavbarCollapsed } = useNavbar();
+
+
+  useEffect(() => {
+        const fetchUserRole = () => {
+          if (ownerUsername && workspaceId && username) {
+            const memberRef = doc(
+              db,
+              "users",
+              ownerUsername,
+              "workspaces",
+              workspaceId,
+              "members",
+              username
+            );
+            const unsubscribeFromMember = onSnapshot(
+              memberRef,
+              (memberSnapshot) => {
+                const memberData = memberSnapshot.data();
+                if (memberData) {
+                  const role = memberData.role;
+    
+                  if (role) {
+                    // Fetch data from workspaceId, "roles", userRole
+                    const roleRef = doc(
+                      db,
+                      "users",
+                      ownerUsername,
+                      "workspaces",
+                      workspaceId,
+                      "roles",
+                      role
+                    );
+                    const unsubscribeFromRole = onSnapshot(
+                      roleRef,
+                      (roleSnapshot) => {
+                        const roleData = roleSnapshot.data();
+                        if (roleData) {
+                          setUserRole(roleData as Role);
+                          sessionStorage.setItem(
+                            "userRole",
+                            JSON.stringify(roleData)
+                          );
+                        } else {
+                          setUserRole(null);
+                          sessionStorage.removeItem("userRole");
+                        }
+                      }
+                    );
+    
+                    // Return cleanup function for role snapshot
+                    return () => unsubscribeFromRole();
+                  } else {
+                    setUserRole(null);
+                    sessionStorage.removeItem("userRole");
+                  }
+                }
+              }
+            );
+    
+            // Return cleanup function for member snapshot
+            return () => unsubscribeFromMember();
+          }
+        };
+    
+        // Call fetchUserRole and store cleanup function
+        const unsubscribe = fetchUserRole();
+    
+        // Cleanup function for useEffect
+        return () => {
+          if (unsubscribe) {
+            unsubscribe();
+          }
+        };
+      }, [db, ownerUsername, workspaceId, username]);
 
   const handleFileUpload = async (files: FileList): Promise<Attachment[]> => {
     const uploadedFiles: Attachment[] = [];
@@ -132,13 +207,13 @@ export default function Chat() {
         workspaceId,
         "threads"
       );
-      console.log("Fetching threads from:", threadsCollection.path);
+
       const unsubscribe = onSnapshot(threadsCollection, (snapshot) => {
         const threadsData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as ChatThread[];
-        console.log("Fetched threads data:", threadsData);
+
         setThreads(threadsData);
       });
 
@@ -364,12 +439,15 @@ export default function Chat() {
 
   const rightButtons = (
     <>
+      {(username === ownerUsername ||
+            (userRole?.settingsView)) && (
       <Settings
         workspaceId={workspaceId || ""}
         ownerUsername={ownerUsername || ""}
         userRole={userRole as Role}
         members={members}
-      />
+          />
+      )}
     </>
   );
 
@@ -396,6 +474,7 @@ export default function Chat() {
             ownerUsername={ownerUsername || ""}
             workspaceId={workspaceId || ""}
             setThreads={setThreads}
+            userRole={userRole as Role}
           />
         </div>
         <div

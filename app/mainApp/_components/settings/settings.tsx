@@ -37,19 +37,30 @@ const Settings: React.FC<UserInfo> = ({
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [permissions, setPermissions] = useState({
-    moveCard: false,
-    addRemoveCard: false,
+    moveCard: true,
+    addRemoveCard: true,
     addRemoveRole: false,
     changePermissions: false,
-    moveTile: false,
-    addRemoveTile: false,
-    assignCard: false,
+    moveTile: true,
+    addRemoveTile: true,
+    assignCard: true,
+    createPost: true,
+    editPost: false,
+    removePost: false,
+    membersView: false,
+    settingsView: false,
+    removeMember: false,
+    viewAssignedCards: false,
+    changeChatPermissions: false
   });
   const db = getFirestore(firebase_app);
   const username = useAuth();
   const { notify } = useContext(NotificationContext);
   const [isCreateRoleVisible, setIsCreateRoleVisible] = useState(false);
   const [isBoardSectionVisible, setIsBoardSectionVisible] = useState(false);
+  const [isChatSectionVisible, setIsChatSectionVisible] = useState(false);
+  const [isAnnouncementsSectionVisible, setIsAnnouncementsSectionVisible] = useState(false);
+  const [isMembersSectionVisible, setIsMembersSectionVisible] = useState(false);
 
   useEffect(() => {
     if (db && ownerUsername && workspaceId) {
@@ -79,6 +90,10 @@ const Settings: React.FC<UserInfo> = ({
   const handleSelectMember = (member: Member) => setSelectedMember(member);
 
   const handleAssignRole = async (role: Role) => {
+    if (username !== ownerUsername && !userRole?.changePermissions) {
+      notify("You do not have permission to change permissions.", "error");
+      return;
+    }
     if (selectedMember) {
       const memberRef = doc(
         db,
@@ -125,10 +140,21 @@ const Settings: React.FC<UserInfo> = ({
 
     await setDoc(roleRef, {
       name: newRoleName,
-      changePermissions: false,
+      moveCard: true,
+      addRemoveCard: true,
       addRemoveRole: false,
-      moveCard: false,
-      addRemoveCard: false,
+      changePermissions: false,
+      moveTile: true,
+      addRemoveTile: true,
+      assignCard: true,
+      createPost: true,
+      editPost: false,
+      removePost: false,
+      membersView: false,
+      settingsView: false,
+      removeMember: false,
+      viewAssignedCards: false,
+      changeChatPermissions: false,
     });
     setNewRoleName("");
   };
@@ -143,6 +169,14 @@ const Settings: React.FC<UserInfo> = ({
       moveTile: role.moveTile,
       addRemoveTile: role.addRemoveTile,
       assignCard: role.assignCard,
+      createPost: role.createPost,
+      editPost: role.editPost,
+      removePost: role.removePost,
+      membersView: role.membersView,
+      settingsView: role.settingsView,
+      removeMember: role.removeMember,
+      viewAssignedCards: role.viewAssignedCards,
+      changeChatPermissions: role.changeChatPermissions,
     });
   };
 
@@ -202,7 +236,7 @@ const Settings: React.FC<UserInfo> = ({
           onClick={handleCloseSettings}
         >
           <div
-            className="bg-white rounded-2xl ml-24 mr-8 p-2 shadow-lg flex flex-col w-full max-w-4xl max-h-screen overflow-scroll "
+            className="bg-white rounded-2xl ml-20 mr-4 p-2 shadow-lg flex flex-col w-full max-w-4xl max-h-screen overflow-scroll "
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start rounded-lg">
@@ -278,7 +312,7 @@ const Settings: React.FC<UserInfo> = ({
                         />
                         <button
                           onClick={handleCreateRole}
-                          className="mt-2 bg-blue-500 text-white rounded-xl p-2 hover:bg-blue-600"
+                          className="mt-2 bg-sky-100 rounded-xl p-2 hover:bg-sky-200"
                         >
                           Save
                         </button>
@@ -311,44 +345,7 @@ const Settings: React.FC<UserInfo> = ({
                       Board
                     </button>
                     {isBoardSectionVisible && (
-                      <div className="flex flex-col items-stretch px-2 space-y-2">
-                        <h2 className="text-lg font-semibold text-start">
-                          Member Settings
-                        </h2>
-                        {[
-                          {
-                            label: "Add/Remove Role",
-                            permission: "addRemoveRole",
-                          },
-                          {
-                            label: "Change permissions",
-                            permission: "changePermissions",
-                          },
-                        ].map(({ label, permission }) => (
-                          <div
-                            key={permission}
-                            className="flex items-center justify-between space-x-2"
-                          >
-                            <span>{label}</span>
-                            <Switch
-                              onChange={() =>
-                                handleTogglePermission(
-                                  permission as keyof typeof permissions
-                                )
-                              }
-                              checked={
-                                permissions[
-                                  permission as keyof typeof permissions
-                                ]
-                              }
-                              offColor="#767577"
-                              onColor="#81b0ff"
-                              height={20}
-                              width={48}
-                              handleDiameter={16}
-                            />
-                          </div>
-                        ))}
+                      <div className="flex flex-col items-stretch px-2 space-y-2 bg-sky-100 rounded-xl p-2 mb-2">
                         <h2 className="text-lg font-bold text-start">Cards</h2>
                         {[
                           { label: "Move Card", permission: "moveCard" },
@@ -388,6 +385,192 @@ const Settings: React.FC<UserInfo> = ({
                           {
                             label: "Add/Remove tile",
                             permission: "addRemoveTile",
+                          },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      className={`w-full p-2 text-start text-lg font-bold rounded-xl mb-2 ${
+                        isAnnouncementsSectionVisible
+                          ? "bg-sky-200"
+                          : "hover:bg-sky-100"
+                      }`}
+                      onClick={() =>
+                        setIsAnnouncementsSectionVisible(
+                          !isAnnouncementsSectionVisible
+                        )
+                      }
+                    >
+                      Announcements
+                    </button>
+                    {isAnnouncementsSectionVisible && (
+                      <div className="flex flex-col items-stretch px-2 space-y-2 bg-sky-100 rounded-xl p-2 mb-2">
+                        <h2 className="text-lg font-bold text-start">Posts</h2>
+                        {[
+                          { label: "Create Post", permission: "createPost" },
+                          { label: "Edit Any Post", permission: "editPost" },
+                          { label: "Remove Any Post", permission: "removePost" },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      className={`w-full p-2 text-start text-lg font-bold rounded-xl mb-2 ${
+                        isChatSectionVisible ? "bg-sky-200" : "hover:bg-sky-100"
+                      }`}
+                      onClick={() =>
+                        setIsChatSectionVisible(!isChatSectionVisible)
+                      }
+                    >
+                      Chat
+                    </button>
+                    {isChatSectionVisible && (
+                      <div className="flex flex-col items-stretch px-2 space-y-2 bg-sky-100 rounded-xl p-2 mb-2">
+                        <h2 className="text-lg font-bold text-start">Chat</h2>
+                        {[
+                          { label: "Change Chat Permissions", permission: "changeChatPermissions" },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      className={`w-full p-2 text-start text-lg font-bold rounded-xl mb-2 ${
+                        isMembersSectionVisible
+                          ? "bg-sky-200"
+                          : "hover:bg-sky-100"
+                      }`}
+                      onClick={() =>
+                        setIsMembersSectionVisible(!isMembersSectionVisible)
+                      }
+                    >
+                      Members
+                    </button>
+                    {isMembersSectionVisible && (
+                      <div className="flex flex-col items-stretch px-2 space-y-2 bg-sky-100 rounded-xl p-2 mb-2">
+                        <h2 className="text-lg font-semibold text-start">
+                          Member Settings
+                        </h2>
+                        {[
+                          {
+                            label: "Add/Remove Role",
+                            permission: "addRemoveRole",
+                          },
+                          {
+                            label: "Change permissions",
+                            permission: "changePermissions",
+                          },
+                          {
+                            label: "Remove Member",
+                            permission: "removeMember",
+                          },
+                          {
+                            label: "View Assigned Cards",
+                            permission: "viewAssignedCards",
+                          },
+                        ].map(({ label, permission }) => (
+                          <div
+                            key={permission}
+                            className="flex items-center justify-between space-x-2"
+                          >
+                            <span>{label}</span>
+                            <Switch
+                              onChange={() =>
+                                handleTogglePermission(
+                                  permission as keyof typeof permissions
+                                )
+                              }
+                              checked={
+                                permissions[
+                                  permission as keyof typeof permissions
+                                ]
+                              }
+                              offColor="#767577"
+                              onColor="#81b0ff"
+                              height={20}
+                              width={48}
+                              handleDiameter={16}
+                            />
+                          </div>
+                        ))}
+                        <h2 className="text-lg font-bold text-start">View</h2>
+                        {[
+                          {
+                            label: "Settings View",
+                            permission: "settingsView",
+                          },
+                          {
+                            label: "Members View",
+                            permission: "membersView",
                           },
                         ].map(({ label, permission }) => (
                           <div

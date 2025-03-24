@@ -11,11 +11,13 @@ import {
   doc,
 } from "firebase/firestore";
 import { useSearchParams } from "next/navigation";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Card, Member, Role } from "../mainApp/page";
 import Navbar from "../components/Navbar";
 import Settings from "../mainApp/_components/settings/settings";
 import { useNavbar } from "../components/NavbarContext";
+import { useAuth } from "../_hooks/useAuth";
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
 
 const AssignViewPage: React.FC = () => {
   const db = getFirestore(firebase_app);
@@ -30,6 +32,81 @@ const AssignViewPage: React.FC = () => {
 const dropdownRef = useRef<HTMLDivElement | null>(null);
 const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { isNavbarCollapsed } = useNavbar();
+  const username = useAuth();
+  const { notify } = useContext(NotificationContext);
+
+  useEffect(() => {
+          const fetchUserRole = () => {
+            if (ownerUsername && workspaceId && username) {
+              const memberRef = doc(
+                db,
+                "users",
+                ownerUsername,
+                "workspaces",
+                workspaceId,
+                "members",
+                username
+              );
+              const unsubscribeFromMember = onSnapshot(
+                memberRef,
+                (memberSnapshot) => {
+                  const memberData = memberSnapshot.data();
+                  if (memberData) {
+                    const role = memberData.role;
+      
+                    if (role) {
+                      // Fetch data from workspaceId, "roles", userRole
+                      const roleRef = doc(
+                        db,
+                        "users",
+                        ownerUsername,
+                        "workspaces",
+                        workspaceId,
+                        "roles",
+                        role
+                      );
+                      const unsubscribeFromRole = onSnapshot(
+                        roleRef,
+                        (roleSnapshot) => {
+                          const roleData = roleSnapshot.data();
+                          if (roleData) {
+                            setUserRole(roleData as Role);
+                            sessionStorage.setItem(
+                              "userRole",
+                              JSON.stringify(roleData)
+                            );
+                          } else {
+                            setUserRole(null);
+                            sessionStorage.removeItem("userRole");
+                          }
+                        }
+                      );
+      
+                      // Return cleanup function for role snapshot
+                      return () => unsubscribeFromRole();
+                    } else {
+                      setUserRole(null);
+                      sessionStorage.removeItem("userRole");
+                    }
+                  }
+                }
+              );
+      
+              // Return cleanup function for member snapshot
+              return () => unsubscribeFromMember();
+            }
+          };
+      
+          // Call fetchUserRole and store cleanup function
+          const unsubscribe = fetchUserRole();
+      
+          // Cleanup function for useEffect
+          return () => {
+            if (unsubscribe) {
+              unsubscribe();
+            }
+          };
+        }, [db, ownerUsername, workspaceId, username]);
 
   useEffect(() => {
     const storedUserRole = sessionStorage.getItem("userRole");
@@ -109,6 +186,13 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   }, [db, ownerUsername, workspaceId, selectedUser, viewMode]);
 
   const handleRemoveUser = async () => {
+    if (username !== ownerUsername) {
+      if (!userRole?.removeMember) {
+        console.log("You do not have permission to create posts.");
+        notify("You do not have permission to create posts.", "error");
+        return;
+      }
+    }
     if (selectedUser && ownerUsername && workspaceId) {
       const memberDocRef = doc(
         db,
@@ -120,20 +204,48 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
         selectedUser
       );
       await deleteDoc(memberDocRef);
+
+      // Remove membership from the user's database
+      const membershipsCollection = collection(
+        db,
+        "users",
+        selectedUser,
+        "memberships"
+      );
+      const membershipQuery = query(
+        membershipsCollection,
+        where("workspace", "==", workspaceId)
+      );
+      const membershipSnapshot = await getDocs(membershipQuery);
+      membershipSnapshot.forEach(async (membershipDoc) => {
+        await deleteDoc(membershipDoc.ref);
+      });
+
       setMembers(members.filter((member) => member.username !== selectedUser));
       setSelectedUser(null);
       setViewMode(null);
     }
   };
+  const handleViewAssignedCards = () => {
+    if (userRole?.viewAssignedCards || username === ownerUsername) {
+      setViewMode("view");
+    } else {
+      console.log("You do not have permission to create posts.");
+      notify("You do not have permission to view assigned cards.", "error");
+    }
+  };
 
   const rightButtons = (
     <>
+      {(username === ownerUsername ||
+            (userRole?.settingsView)) && (
       <Settings
         workspaceId={workspaceId || ""}
         ownerUsername={ownerUsername || ""}
         userRole={userRole as Role}
         members={members}
-      />
+          />
+      )}
     </>
   );
 
@@ -146,7 +258,7 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
         } transition-margin duration-300 flex max-h-screen flex-1 p-4`}
       >
         <div className="w-full max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow-md">
-          <h1 className="text-2xl font-bold mb-4">Admin View Page</h1>
+          <h1 className="text-2xl font-bold mb-4">Members</h1>
           <div className="mb-4">
             <label
               htmlFor="user-select"
@@ -175,10 +287,10 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
                     {members.map((member) => (
                       <div
                         key={member.username}
-                        className={`cursor-pointer p-2 rounded-xl m-1 ${
+                        className={`cursor-pointer p-2 rounded-xl ${
                           selectedUser === member.username
-                            ? "bg-blue-500 text-white"
-                            : "hover:bg-blue-300"
+                            ? "bg-sky-100 "
+                            : "hover:bg-blue-200"
                         }`}
                         onClick={() => {
                           setSelectedUser(member.username);
@@ -197,7 +309,7 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
           {selectedUser && (
             <div className="mb-4 flex flex-col sm:flex-row">
               <button
-                onClick={() => setViewMode("view")}
+                onClick={handleViewAssignedCards}
                 className="mr-2 mb-2 sm:mb-0 px-4 py-2 bg-sky-100 rounded-xl hover:bg-blue-200"
               >
                 View Assigned Cards
@@ -210,7 +322,7 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
               </button>
             </div>
           )}
-          {viewMode === "view" && (
+          {viewMode === "view" && (userRole?.viewAssignedCards || username === ownerUsername) && (
             <div>
               <h2 className="text-xl font-bold mb-2">Assigned Cards</h2>
               {cards.length > 0 ? (
@@ -227,7 +339,7 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
               )}
             </div>
           )}
-          {viewMode === "remove" && (
+          {viewMode === "remove" && (userRole?.removeMember || username === ownerUsername) && (
             <div>
               <h2 className="text-xl font-bold mb-2">Remove User</h2>
               <p className="mb-4">

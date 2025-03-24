@@ -7,6 +7,9 @@ import Settings from "../mainApp/_components/settings/settings";
 import { Member, Role } from "../mainApp/page";
 import { useSearchParams } from "next/navigation";
 import { useNavbar } from "../components/NavbarContext";
+import { doc, getFirestore, onSnapshot } from "firebase/firestore";
+import { useAuth } from "../_hooks/useAuth";
+import firebase_app from "@/firebase";
 
 const NewsBoardPage: React.FC = () => {
   const searchParams = useSearchParams();
@@ -15,6 +18,81 @@ const NewsBoardPage: React.FC = () => {
  const [userRole, setUserRole] = useState<Role | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const { isNavbarCollapsed } = useNavbar();
+  const username = useAuth();
+  const db = getFirestore(firebase_app);
+  
+  useEffect(() => {
+      const fetchUserRole = () => {
+        if (ownerUsername && workspaceId && username) {
+          const memberRef = doc(
+            db,
+            "users",
+            ownerUsername,
+            "workspaces",
+            workspaceId,
+            "members",
+            username
+          );
+          const unsubscribeFromMember = onSnapshot(
+            memberRef,
+            (memberSnapshot) => {
+              const memberData = memberSnapshot.data();
+              if (memberData) {
+                const role = memberData.role;
+  
+                if (role) {
+                  // Fetch data from workspaceId, "roles", userRole
+                  const roleRef = doc(
+                    db,
+                    "users",
+                    ownerUsername,
+                    "workspaces",
+                    workspaceId,
+                    "roles",
+                    role
+                  );
+                  const unsubscribeFromRole = onSnapshot(
+                    roleRef,
+                    (roleSnapshot) => {
+                      const roleData = roleSnapshot.data();
+                      if (roleData) {
+                        setUserRole(roleData as Role);
+                        sessionStorage.setItem(
+                          "userRole",
+                          JSON.stringify(roleData)
+                        );
+                      } else {
+                        setUserRole(null);
+                        sessionStorage.removeItem("userRole");
+                      }
+                    }
+                  );
+  
+                  // Return cleanup function for role snapshot
+                  return () => unsubscribeFromRole();
+                } else {
+                  setUserRole(null);
+                  sessionStorage.removeItem("userRole");
+                }
+              }
+            }
+          );
+  
+          // Return cleanup function for member snapshot
+          return () => unsubscribeFromMember();
+        }
+      };
+  
+      // Call fetchUserRole and store cleanup function
+      const unsubscribe = fetchUserRole();
+  
+      // Cleanup function for useEffect
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    }, [db, ownerUsername, workspaceId, username]);
 
   useEffect(() => {
     const storedOwnerUsername = sessionStorage.getItem("ownerUsername");
@@ -35,12 +113,15 @@ const NewsBoardPage: React.FC = () => {
 
   const rightButtons = (
     <>
+      {(username === ownerUsername ||
+            (userRole?.settingsView)) && (
         <Settings
           workspaceId={workspaceId || ""}
           ownerUsername={ownerUsername || ""}
           userRole={userRole as Role}
           members={members}
-        />
+          />
+      )}
     </>
   );
   
@@ -50,7 +131,7 @@ const NewsBoardPage: React.FC = () => {
         <div className={`mt-12 ${
           isNavbarCollapsed ? "ml-16" : "ml-48"
         } transition-margin duration-300 p-4`}>
-          <NewsBoard ownerUsername={ownerUsername} />
+          <NewsBoard ownerUsername={ownerUsername} userRole={userRole as Role} />
         </div>
       </div>
     );

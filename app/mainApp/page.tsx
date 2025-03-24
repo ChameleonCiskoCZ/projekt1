@@ -54,6 +54,14 @@ export interface Role {
   moveTile: boolean;
   addRemoveTile: boolean;
   assignCard: boolean;
+  createPost: boolean;
+  editPost: boolean;
+  removePost: boolean;
+  membersView: boolean;
+  settingsView: boolean;
+  removeMember: boolean;
+  viewAssignedCards: boolean;
+  changeChatPermissions: boolean;
 }
 
 export default function MainApp() {
@@ -303,12 +311,15 @@ export default function MainApp() {
 
   const rightButtons = (
     <>
+      {(username === ownerUsername ||
+            (userRole?.settingsView)) && (
       <Settings
         workspaceId={workspaceId || ""}
         ownerUsername={ownerUsername || ""}
         userRole={userRole as Role}
         members={members}
       />
+      )}
       <i
         className="fas mt-0.5 text-xl fa-filter cursor-pointer p-2 rounded-xl hover:bg-sky-100"
         onClick={() => setShowAssignedCards(!showAssignedCards)}
@@ -328,6 +339,8 @@ export default function MainApp() {
         tiles={tiles}
         isOpen={isInvoicePopupOpen}
         onClose={() => setIsInvoicePopupOpen(false)}
+        ownerUsername={ownerUsername || ""}
+        workspaceId={workspaceId || ""}
       />
 
       <div

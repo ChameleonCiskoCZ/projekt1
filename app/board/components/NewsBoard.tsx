@@ -1,10 +1,12 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import NewsPost from "./NewsPost";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/_hooks/useAuth";
 import { collection, addDoc, getDocs, query, getFirestore, orderBy, doc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import firebase_app from "@/firebase";
+import { NotificationContext } from "@/app/_hooks/notify/notificationContext";
+import { Role } from "@/app/mainApp/page";
 
 interface Post {
   id: string;
@@ -15,18 +17,21 @@ interface Post {
 
 interface NewsBoardProps {
   ownerUsername: string | null;
+  userRole: Role;
 }
 
-const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
+const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername,userRole }) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPostContent, setNewPostContent] = useState("");
   const [editPostId, setEditPostId] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState(true); // Change this based on actual permission logic
+  const [hasPermission, setHasPermission] = useState(true);
   //const ownerUsername = sessionStorage.getItem("ownerUsername");
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get("workspaceId");
   const creatorName = useAuth();
   const db = getFirestore(firebase_app);
+  const username = useAuth();
+  const { notify } = useContext(NotificationContext);
 
   useEffect(() => {
     if (ownerUsername && workspaceId) {
@@ -59,6 +64,13 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
   }, [workspaceId, ownerUsername, db]);
 
   const handleCreatePost = async () => {
+    if (username !== ownerUsername) {
+      if (!userRole?.createPost) {
+        console.log("You do not have permission to create posts.");
+        notify("You do not have permission to create posts.", "error");
+        return;
+      }
+    }
     if (newPostContent.trim() && creatorName?.trim()) {
       const newPost = {
         creator: creatorName,
@@ -88,7 +100,14 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
     setNewPostContent(post.content);
   };
 
-  const handleUpdatePost = async (postId: string, newContent: string) => {
+  const handleUpdatePost = async (postId: string, newContent: string, postCreator: string) => {
+    if (username !== ownerUsername && postCreator !== username) {
+      if (!userRole?.editPost) {
+        console.log("You do not have permission to edit posts.");
+        notify("You do not have permission to edit posts.", "error");
+        return;
+      }
+    }
     const post = posts.find((post) => post.id === postId);
     if (post && newContent.trim() && post.content !== newContent) {
       if (ownerUsername && workspaceId) {
@@ -116,7 +135,14 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
     }
   };
 
-  const handleDeletePost = async (postId: string) => {
+  const handleDeletePost = async (postId: string, postCreator: string) => {
+    if (username !== ownerUsername && postCreator !== username) {
+      if (!userRole?.removePost) {
+        console.log("You do not have permission to remove posts.");
+        notify("You do not have permission to remove posts.", "error");
+        return;
+      }
+    }
     if (ownerUsername && workspaceId) {
       const postRef = doc(
         db,
@@ -141,7 +167,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
             placeholder="Post Content"
             value={newPostContent}
             onChange={(e) => setNewPostContent(e.target.value)}
-            className="border p-2 rounded-2xl w-full mb-2"
+            className="border p-2 rounded-2xl  w-full mb-2"
             rows={4}
           />
           <button
@@ -160,6 +186,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername }) => {
             onEdit={handleEditPost}
             onDelete={handleDeletePost}
             onUpdate={handleUpdatePost}
+            userRole={userRole}
           />
         ))}
       </div>

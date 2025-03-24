@@ -3,6 +3,9 @@ import { ChatThread } from "../page";
 import { doc, getFirestore, updateDoc, writeBatch } from "firebase/firestore";
 import firebase_app from "@/firebase";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import ThreadSettingsPopup from "./ThreadSettingsPopup";
+import { Role } from "@/app/mainApp/page";
+import { useAuth } from "@/app/_hooks/useAuth";
 
 interface ThreadListProps {
   threads: ChatThread[];
@@ -14,6 +17,7 @@ interface ThreadListProps {
   ownerUsername: string;
   workspaceId: string;
   setThreads: (threads: ChatThread[]) => void;
+  userRole: Role;
 }
 
 const ThreadList: React.FC<ThreadListProps> = ({
@@ -26,11 +30,15 @@ const ThreadList: React.FC<ThreadListProps> = ({
   ownerUsername,
   workspaceId,
   setThreads,
+  userRole,
 }) => {
   const db = getFirestore(firebase_app);
   const [isCreateThreadVisible, setIsCreateThreadVisible] = useState(false);
+  const [selectedThreadForSettings, setSelectedThreadForSettings] =
+    useState<ChatThread | null>(null);
 
   const createThreadRef = useRef<HTMLDivElement>(null);
+  const username = useAuth();
 
   const handleClickOutside = (event: MouseEvent) => {
     if (
@@ -86,6 +94,15 @@ const ThreadList: React.FC<ThreadListProps> = ({
     setThreads(reorderedThreads);
   };
 
+  const filteredThreads = threads.filter(
+    (thread) =>
+      username === ownerUsername ||
+      !thread.allowedRoles ||
+      thread.allowedRoles.length === 0 ||
+      (userRole && thread.allowedRoles.includes(userRole.name))
+  );
+  
+
   return (
     <div className="p-4 bg-white shadow rounded-2xl overflow-auto">
       <div className="flex justify-between items-center mb-4">
@@ -99,7 +116,7 @@ const ThreadList: React.FC<ThreadListProps> = ({
               ref={provided.innerRef}
               className="space-y-2"
             >
-              {threads
+              {filteredThreads
                 .sort((a, b) => a.position - b.position)
                 .map((thread, index) => (
                   <Draggable
@@ -112,16 +129,28 @@ const ThreadList: React.FC<ThreadListProps> = ({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className={`p-2 cursor-pointer rounded-xl ${
+                        className={`p-2 cursor-pointer rounded-xl flex justify-between items-center ${
                           selectedThreadId === thread.id
                             ? "bg-sky-200 font-semibold"
                             : "hover:bg-sky-100"
-                        }`}
+                        } group`}
                         onClick={() => handleSelectThread(thread.id)}
                       >
                         <span className="overflow-wrap-anywhere">
                           {thread.title}
                         </span>
+                        {(username === ownerUsername ||
+            (userRole?.changeChatPermissions)) && (
+                        <button
+                          className="text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedThreadForSettings(thread);
+                          }}
+                        >
+                          <i className="fas fa-cog"></i>
+                            </button>
+                        )}
                       </li>
                     )}
                   </Draggable>
@@ -166,6 +195,15 @@ const ThreadList: React.FC<ThreadListProps> = ({
           </button>
         )}
       </div>
+      {selectedThreadForSettings && (
+        <ThreadSettingsPopup
+          userRole={userRole}
+          thread={selectedThreadForSettings}
+          onClose={() => setSelectedThreadForSettings(null)}
+          ownerUsername={ownerUsername}
+          workspaceId={workspaceId}
+        />
+      )}
     </div>
   );
 };

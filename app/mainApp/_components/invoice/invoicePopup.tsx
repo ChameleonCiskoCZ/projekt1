@@ -2,20 +2,27 @@ import React, { useState } from "react";
 import { Tile, Card } from "../../page";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { arrayUnion, doc, getDoc, getFirestore, updateDoc } from "firebase/firestore";
+import firebase_app from "@/firebase";
 
 interface InvoicePopupProps {
   tiles: Tile[];
   isOpen: boolean;
   onClose: () => void;
+  ownerUsername: string;
+  workspaceId: string;
 }
 
 const InvoicePopup: React.FC<InvoicePopupProps> = ({
   tiles,
   isOpen,
   onClose,
+  ownerUsername,
+  workspaceId,
 }) => {
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
   const [cardPrices, setCardPrices] = useState<{ [key: string]: number }>({});
+  const db = getFirestore(firebase_app);
   const [invoiceData, setInvoiceData] = useState({
     supplierName: "",
     supplierAddress: "",
@@ -50,6 +57,55 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
   const [expandedSections, setExpandedSections] = useState<{
     [key: string]: boolean;
   }>({});
+
+
+  const handleSaveSupplierPreset = async () => {
+    const preset = {
+      supplierName: invoiceData.supplierName,
+      supplierAddress: invoiceData.supplierAddress,
+      supplierPostal: invoiceData.supplierPostal,
+      supplierCity: invoiceData.supplierCity,
+      supplierCountry: invoiceData.supplierCountry,
+      supplierCourt: invoiceData.supplierCourt,
+      supplierID: invoiceData.supplierID,
+      bankAccount: invoiceData.bankAccount,
+      bankName: invoiceData.bankName,
+      IBAN: invoiceData.IBAN,
+      SWIFT: invoiceData.SWIFT,
+      timestamp: new Date(),
+    };
+    // Update the workspace document's supplierInfo array – adjust the path as needed.
+    const workspaceRef = doc(
+      db,
+      "users",
+      ownerUsername,
+      "workspaces",
+      workspaceId
+    );
+    await updateDoc(workspaceRef, {
+      supplierInfo: arrayUnion(preset),
+    });
+  };
+
+  const handleLoadSupplierPreset = async () => {
+    // Retrieve the most recent preset from the workspace document.
+    const workspaceRef = doc(
+      db,
+      "users",
+      ownerUsername,
+      "workspaces",
+      workspaceId
+    );
+    const workspaceSnap = await getDoc(workspaceRef);
+    if (workspaceSnap.exists()) {
+      const data = workspaceSnap.data();
+      if (data.supplierInfo && data.supplierInfo.length) {
+        // For example, load the last preset added
+        const preset = data.supplierInfo[data.supplierInfo.length - 1];
+        setInvoiceData((prev) => ({ ...prev, ...preset }));
+      }
+    }
+  };
 
   const toggleSection = (tileId: string) => {
     setExpandedSections((prev) => ({
@@ -263,7 +319,23 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
           {/* Supplier Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <h3 className="text-lg font-bold mb-2">Supplier Information</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-bold">Supplier Information</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleSaveSupplierPreset}
+                    className="px-3 py-1 bg-sky-100 hover:bg-sky-200 rounded-xl text-sm"
+                  >
+                    Save Preset
+                  </button>
+                  <button
+                    onClick={handleLoadSupplierPreset}
+                    className="px-3 py-1 bg-sky-100 hover:bg-sky-200 rounded-xl text-sm"
+                  >
+                    Load Preset
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -271,6 +343,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierName"
+                    value={invoiceData.supplierName}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -279,6 +352,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierAddress"
+                    value={invoiceData.supplierAddress}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -287,6 +361,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierPostal"
+                    value={invoiceData.supplierPostal}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -295,6 +370,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierCity"
+                    value={invoiceData.supplierCity}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -303,6 +379,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierCountry"
+                    value={invoiceData.supplierCountry}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -311,6 +388,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierCourt"
+                    value={invoiceData.supplierCourt}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -321,6 +399,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="supplierID"
+                    value={invoiceData.supplierID}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -329,6 +408,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="bankAccount"
+                    value={invoiceData.bankAccount}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -337,6 +417,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="bankName"
+                    value={invoiceData.bankName}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -345,6 +426,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="IBAN"
+                    value={invoiceData.IBAN}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -353,6 +435,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </label>
                   <input
                     name="SWIFT"
+                    value={invoiceData.SWIFT}
                     onChange={handleInputChange}
                     className="border p-2 rounded-xl w-full mb-2"
                   />
@@ -498,7 +581,9 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
             {tiles.map((tile) => (
               <div key={tile.id} className="mb-2">
                 <h4
-                  className="text-md font-semibold mb-2 cursor-pointer hover:bg-sky-100 p-2 rounded-xl flex items-center justify-between"
+                  className={`text-md font-semibold mb-2 cursor-pointer p-2 rounded-xl flex items-center justify-between hover:bg-sky-100 ${
+                    expandedSections[tile.id] ? "bg-sky-200" : ""
+                  }`}
                   onClick={() => toggleSection(tile.id)}
                 >
                   {tile.name}
@@ -511,7 +596,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                   </span>
                 </h4>
                 <div
-                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                  className={`transition-all  rounded-xl duration-300 ease-in-out overflow-hidden ${
                     expandedSections[tile.id] ? "max-h-screen" : "max-h-0"
                   }`}
                 >
@@ -536,7 +621,7 @@ const InvoicePopup: React.FC<InvoicePopupProps> = ({
                         onChange={(e) =>
                           handlePriceChange(card.id, parseFloat(e.target.value))
                         }
-                        className="border p-2 rounded-xl w-24"
+                        className="border p-2 rounded-xl w-24 "
                       />
                     </div>
                   ))}

@@ -86,10 +86,13 @@ export default function WorkspacePage() {
               };
             })
           );
-          setWorkspaces((prevWorkspaces) => [
-            ...prevWorkspaces,
-            ...membershipWorkspaceList,
-          ]);
+          // Merge and deduplicate
+          setWorkspaces((prevWorkspaces) => {
+            const map = new Map<string, Workspace>();
+            prevWorkspaces.forEach((ws) => map.set(ws.id, ws));
+            membershipWorkspaceList.forEach((ws) => map.set(ws.id, ws));
+            return Array.from(map.values());
+          });
         }
       );
 
@@ -131,6 +134,33 @@ export default function WorkspacePage() {
         invites: [],
         owner: username,
       });
+      const defaultRoleRef = doc(
+        db,
+        "users",
+        username,
+        "workspaces",
+        newWorkspaceRef.id,
+        "roles",
+        "User"
+      );
+      await setDoc(defaultRoleRef, {
+        name: "User",
+          moveCard: true,
+          addRemoveCard: true,
+          addRemoveRole: false,
+          changePermissions: false,
+          moveTile: true,
+          addRemoveTile: true,
+          assignCard: true,
+          createPost: true,
+          editPost: false,
+          removePost: false,
+          membersView: false,
+          settingsView: false,
+          removeMember: false,
+          viewAssignedCards: false,
+          changeChatPermissions: false,
+      });
       setWorkspaces([
         ...workspaces,
         {
@@ -148,6 +178,7 @@ export default function WorkspacePage() {
   const handleWorkspaceSelect = (workspace: Workspace) => {
     sessionStorage.setItem("ownerUsername", workspace.owner);
     sessionStorage.setItem("workspaceId", workspace.id);
+    sessionStorage.setItem("workspaceName", workspace.name);
     //router.push("/mainApp");
     router.push(`/mainApp?workspaceId=${workspace.id}`);
     //setSelectedWorkspaceId(workspaceId);
@@ -198,12 +229,21 @@ export default function WorkspacePage() {
     if (username) {
       const workspaceRef = doc(db, "users", username, "workspaces", id);
       const workspaceDoc = await getDoc(workspaceRef);
-      const members = workspaceDoc.data()?.members;
       if (username !== workspaceDoc.data()?.owner) {
         notify("Only owner can delete this workspace", "error");
         return;
       }
-
+      const membersCollection = collection(
+        db,
+        "users",
+        username,
+        "workspaces",
+        id,
+        "members"
+      );
+      const membersSnapshot = await getDocs(membersCollection);
+      const members = membersSnapshot.docs.map((doc) => doc.id);
+      console.log("Members:", members);
       if (members) {
         for (const member of members) {
           const membershipsCollection = collection(
@@ -231,6 +271,7 @@ export default function WorkspacePage() {
       notify("Workspace removed successfully", "success");
     }
   };
+  
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(
     null
   );
@@ -295,6 +336,11 @@ export default function WorkspacePage() {
 
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const handleCreateInvite = async (workspace: Workspace) => {
+    if (workspace.owner !== username) {
+      console.log("Only owner can invite other users to workspace.");
+      notify("Only owner can invite other users to workspace.", "error");
+      return;
+    }
     if (username) {
       const workspaceRef = doc(
         db,
@@ -318,6 +364,7 @@ export default function WorkspacePage() {
         console.error("Error creating invite:", error);
       }
     }
+    togglePopup();
   };
   const handleJoinWorkspace = async (inviteCode: string) => {
     if (username) {
@@ -362,7 +409,7 @@ export default function WorkspacePage() {
                     "members",
                     username
                   );
-                  await setDoc(memberDocRef, { username });
+                  await setDoc(memberDocRef, { username, role: "User" });
 
                   const membershipsRef = collection(
                     db,
@@ -447,14 +494,16 @@ export default function WorkspacePage() {
                   )}
                 </div>
               )}
-              <button
-                ref={buttonRef2}
-                onClick={(event) => handleButtonClick(workspace.id, event)}
-                onMouseEnter={(event) => event.stopPropagation()}
-                className="flex items-center justify-center text-xl p-2 rounded-xl hover:bg-gray-100"
-              >
-                <i className="fas fa-bars"></i>
-              </button>
+              {workspace.owner === username && (
+                <button
+                  ref={buttonRef2}
+                  onClick={(event) => handleButtonClick(workspace.id, event)}
+                  onMouseEnter={(event) => event.stopPropagation()}
+                  className="flex items-center justify-center text-xl p-2 rounded-xl hover:bg-gray-100"
+                >
+                  <i className="fas fa-bars"></i>
+                </button>
+              )}
             </div>
             {openWorkspaceId === workspace.id &&
               ReactDOM.createPortal(
@@ -494,7 +543,6 @@ export default function WorkspacePage() {
                     <button
                       onClick={() => {
                         handleCreateInvite(workspace);
-                        togglePopup();
                       }}
                       className="block w-full rounded-xl text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       role="menuitem"
