@@ -49,6 +49,7 @@ export const useAddCard = (
         description: "",
         assignedTo: [],
         elapsedTime: 0,
+        markedAsDone: false, // Add the missing property
       };
 
       // Add the card to the tile

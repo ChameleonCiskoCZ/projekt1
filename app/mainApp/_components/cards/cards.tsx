@@ -36,7 +36,11 @@ export const Cards: React.FC<CardsComponentProps> = ({
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    className=" bg-sky-300 bg-opacity-40 p-2 rounded-xl mt-2 backdrop-blur relative"
+                    className={`${
+                      card.markedAsDone
+                        ? "bg-lime-300 bg-opacity-40"
+                        : "bg-sky-300 bg-opacity-40"
+                    } p-2 rounded-xl mt-2 backdrop-blur relative`}
                     onClick={() => {
                       setSelectedTile(tile);
                       setSelectedCard(card);

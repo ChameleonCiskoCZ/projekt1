@@ -162,7 +162,7 @@ const NewsBoard: React.FC<NewsBoardProps> = ({ ownerUsername,userRole }) => {
     <div className="mx-auto max-w-screen-sm bg-white p-4 rounded-2xl shadow">
       {hasPermission && (
         <div className="mb-4">
-          <h2 className="text-xl font-bold mb-2">Create New Post</h2>
+          
           <textarea
             placeholder="Post Content"
             value={newPostContent}

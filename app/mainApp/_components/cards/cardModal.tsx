@@ -277,6 +277,26 @@ export const CardModal: React.FC<CardModalProps> = ({
   const handleCloseEnlargedImage = () => {
     setEnlargedImage(null);
   };
+ const handleToggleDone = () => {
+   if (!selectedCard || !selectedTile) return;
+
+   const newStatus = selectedCard.markedAsDone ? false : true;
+   const updatedCard = { ...selectedCard, markedAsDone: newStatus };
+
+   setSelectedCard(updatedCard);
+
+
+   tiles.forEach((tile) => {
+     tile.cards.forEach((card) => {
+       if (card.id === selectedCard.id) {
+         card.markedAsDone = newStatus;
+       }
+     });
+   });
+
+
+   notify(`Card marked as ${newStatus ? "done" : "not done"}`, "success");
+ };
 
   return (
     <div>
@@ -456,6 +476,14 @@ export const CardModal: React.FC<CardModalProps> = ({
                 )}
                 <button
                   className="m-1 p-2 bg-blue-300 hover:bg-blue-500 text-white rounded-xl"
+                  onClick={handleToggleDone}
+                >
+                  {selectedCard.markedAsDone
+                    ? "Unmark as Done"
+                    : "Mark as Done"}
+                </button>
+                <button
+                  className="m-1 p-2 bg-blue-300 hover:bg-blue-500 text-white rounded-xl"
                   onClick={() => {
                     setIsAssigning(!isAssigning);
                   }}
@@ -469,7 +497,7 @@ export const CardModal: React.FC<CardModalProps> = ({
                   >
                     <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div
-                        className="py-1"
+                        className=""
                         role="menu"
                         aria-orientation="vertical"
                         aria-labelledby="options-menu"

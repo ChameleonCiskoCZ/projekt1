@@ -31,6 +31,7 @@ export type Card = {
   assignedTo: string[];
   elapsedTime: number;
   images?: string[];
+  markedAsDone: boolean;
 };
 
 export type Tile = {
